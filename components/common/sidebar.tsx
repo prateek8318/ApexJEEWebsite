@@ -1,0 +1,193 @@
+"use client";
+import Link from "next/link";
+import Image from "next/image";
+import { cn } from "@lib/utils";
+import { useState } from "react";
+import { icon } from "@assets";
+import { Button } from "@components/ui/button";
+import { ChevronLeft, LogOut, Menu } from "lucide-react";
+import { ScrollArea } from "@components/ui/scroll-area";
+import CollapsibleMenuItem from "./collapsible-menu-item";
+import MenuItemComponent from "./menu-item";
+import AppSelectorDialog from "./app-selector-dialog";
+
+import useSession from "@stores/session";
+import { useRouter } from "next/navigation";
+import { useMutation } from "@tanstack/react-query";
+import { toast } from "@components/ui/toaster";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@components/ui/tooltip";
+
+type SidebarProps = {
+  menuItemsData?: MenuItem[];
+};
+
+const Sidebar = ({ menuItemsData }: SidebarProps) => {
+
+  const router = useRouter();
+  const { setSession } = useSession();
+  const [sidebarIsOpen, setSidebarIsOpen] = useState<boolean>(true);
+  const [onLogoutToast, setOnLogoutToast] = useState<string | number>();
+  const [appSelectorOpen, setAppSelectorOpen] = useState(false);
+
+
+
+  async function onLogout() {
+    setOnLogoutToast(
+      toast.loading("Loading...", { description: "Logging out..." }),
+    );
+    await fetch("/api/auth/logout", { method: "POST" });
+  }
+
+  const { mutate, isPending } = useMutation({
+    mutationFn: onLogout,
+    onSuccess: () => {
+      toast.success("Success!", {
+        id: onLogoutToast,
+        description: "Logged out successfully!",
+      });
+      router.replace("/auth/login");
+      setSession(null);
+    },
+    onError: () => {
+      toast.error("Error!", {
+        id: onLogoutToast,
+        description: "Internal server error!",
+      });
+    },
+  });
+
+
+  return (
+    <aside
+      className={cn(
+        "border-border bg-[#0F172A] sticky inset-y-0 left-0 z-30 hidden h-screen shrink-0 -translate-x-full border-r py-5 transition-[width] duration-300 ease-in-out lg:flex lg:translate-x-0 lg:flex-col lg:items-center lg:justify-start",
+        sidebarIsOpen ? "w-72 px-5" : "w-20 px-2",
+      )}
+    >
+      <Button
+        className="bg-accent absolute top-4 -right-4 hidden size-8 lg:flex"
+        onClick={() => setSidebarIsOpen(!sidebarIsOpen)}
+        size="icon"
+        variant="ghost"
+      >
+        <ChevronLeft
+          className={cn(
+            "transition-transform duration-300 ease-in-out",
+            sidebarIsOpen ? "rotate-0" : "rotate-180",
+          )}
+          size={16}
+        />
+      </Button>
+      <Button
+        className="transition-transform duration-300 ease-in-out hover:bg-transparent"
+        size={sidebarIsOpen ? "default" : "icon"}
+        variant="ghost"
+        asChild
+      >
+        <Link href="/">
+          {sidebarIsOpen ? (
+            <div className="flex items-center gap-2 mt-6 mr-14">
+              <Image
+                alt="Logo"
+                className="transition-transform duration-400"
+                height={40}
+                priority
+                src={icon}
+              />
+              <span className="text-2xl font-bold text-accent">
+                Apex JEE
+              </span>
+            </div>
+          ) : (
+            <Image alt="Logo" height={40} priority src={icon} width={40} />
+          )}
+        </Link>
+      </Button>
+      <ScrollArea className="mt-8 flex w-full flex-col items-center justify-center gap-2">
+        <ul className="flex w-full flex-col items-center justify-center gap-1 p-1">
+          {(menuItemsData)?.map((item: MenuItem) => (
+            <li
+              className="flex w-full items-center justify-center gap-1"
+              key={item?.uuid}
+            >
+              {item?.subMenus?.length ? (
+                <CollapsibleMenuItem
+                  menuItem={item}
+                  sidebarIsOpen={sidebarIsOpen}
+                />
+              ) : (
+                <MenuItemComponent menuItem={item} sidebarIsOpen={sidebarIsOpen} />
+              )}
+            </li>
+          ))}
+        </ul>
+      </ScrollArea>
+      <div
+        className={cn(
+          "transition-all duration-300 ease-in-out mt-auto bg-white rounded-xl flex items-center justify-between py-2 px-3 w-full border border-border shadow-sm",
+          !sidebarIsOpen && "p-2 justify-center",
+        )}
+      >
+        {sidebarIsOpen && (
+          <div className="flex items-center gap-2">
+            <div
+              className={cn(
+                "bg-primary text-white font-bold rounded-full flex items-center justify-center shrink-0",
+                sidebarIsOpen ? "size-8 text-xs" : "size-8 text-xs",
+              )}
+            >
+              Th
+            </div>
+            <span
+              className={cn(
+                "text-primary font-bold text-base transition-all duration-300 ease-in-out",
+                sidebarIsOpen ? "opacity-100 translate-x-0" : "opacity-0 invisible -translate-x-10 w-0",
+              )}
+            >
+              TECH
+            </span>
+          </div>
+        )}
+
+        <div className="flex items-center gap-1">
+          {sidebarIsOpen && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    className="hover:bg-accent/50 text-muted-foreground p-2 h-9 w-9 rounded-xl"
+                    disabled={isPending}
+                    onClick={() => mutate()}
+                    variant="ghost"
+                  >
+                    <LogOut size={18} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p>Logout</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+
+          <Button
+            className="hover:bg-transparent"
+            onClick={() => setAppSelectorOpen(true)}
+            size="icon"
+            variant="ghost"
+          >
+            <Menu className="text-muted-foreground" size={20} />
+          </Button>
+        </div>
+      </div>
+      <AppSelectorDialog isOpen={appSelectorOpen} onOpenChange={setAppSelectorOpen} />
+    </aside>
+  );
+};
+
+export default Sidebar;
