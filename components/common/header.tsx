@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Bell, Settings, HelpCircle, Menu, UserRound } from "lucide-react";
 import Image from "next/image";
 import { Button } from "@components/ui/button";
@@ -20,7 +20,7 @@ import axios from "@config/axios";
 import { AxiosError } from "axios";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "@components/ui/toaster";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { logo } from "@assets";
 
 type HeaderProps = {
@@ -36,8 +36,14 @@ const Header = ({
 }: HeaderProps) => {
   const { session, setSession } = useSession();
   const router = useRouter();
+  const pathname = usePathname();
   const [openSidebarSheet, setOpenSidebarSheet] = useState<boolean>(false);
   const [onLogoutToast, setOnLogoutToast] = useState<string | number>();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   async function onLogout() {
     setOnLogoutToast(
@@ -142,7 +148,7 @@ const Header = ({
                 <Avatar className="h-full w-full border-none">
                   <AvatarImage />
                   <AvatarFallback className="bg-primary text-accent font-bold">
-                    {session?.name?.charAt(0).toUpperCase() ?? "U"}
+                    {mounted ? (session?.name?.charAt(0).toUpperCase() ?? "U") : "U"}
                   </AvatarFallback>
                 </Avatar>
               </Button>
@@ -151,22 +157,22 @@ const Header = ({
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1 p-1">
                   <p className="text-sm font-semibold leading-none text-foreground">
-                    {session?.name}
+                    {mounted ? session?.name : ""}
                   </p>
                   <p className="text-xs leading-none text-muted-foreground">
-                    {session?.email}
+                    {mounted ? session?.email : ""}
                   </p>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild className="cursor-pointer">
-                <Link href="/settings">
+                <Link href={pathname?.startsWith("/admin") ? "/admin/settings" : "/settings"}>
                   <Settings className="mr-2 h-4 w-4" />
                   <span>Settings</span>
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild className="cursor-pointer">
-                <Link href="/profile">
+                <Link href={pathname?.startsWith("/admin") ? "/admin/profile" : "/profile"}>
                   <UserRound className="mr-2 h-4 w-4" />
                   <span>Profile</span>
                 </Link>

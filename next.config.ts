@@ -134,6 +134,7 @@ import { NextConfig } from "next";
 /** @type {import('next').NextConfig} */
 const nextConfig: NextConfig = {
   images: {
+    qualities: [70, 75, 95],
     dangerouslyAllowLocalIP: true,
     remotePatterns: [
       { hostname: "flagcdn.com", pathname: "**", protocol: "https" },

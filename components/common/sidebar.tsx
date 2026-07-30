@@ -13,6 +13,7 @@ import AppSelectorDialog from "./app-selector-dialog";
 
 import useSession from "@stores/session";
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "@components/ui/toaster";
 import {
@@ -29,12 +30,12 @@ type SidebarProps = {
 const Sidebar = ({ menuItemsData }: SidebarProps) => {
 
   const router = useRouter();
-  const { setSession } = useSession();
+  const { session, setSession } = useSession();
   const [sidebarIsOpen, setSidebarIsOpen] = useState<boolean>(true);
   const [onLogoutToast, setOnLogoutToast] = useState<string | number>();
-  const [appSelectorOpen, setAppSelectorOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
-
+  useEffect(() => setMounted(true), []);
 
   async function onLogout() {
     setOnLogoutToast(
@@ -134,22 +135,22 @@ const Sidebar = ({ menuItemsData }: SidebarProps) => {
         )}
       >
         {sidebarIsOpen && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 overflow-hidden">
             <div
               className={cn(
                 "bg-primary text-white font-bold rounded-full flex items-center justify-center shrink-0",
                 sidebarIsOpen ? "size-8 text-xs" : "size-8 text-xs",
               )}
             >
-              Th
+              {mounted ? (session?.name?.charAt(0).toUpperCase() || "U") : "U"}
             </div>
             <span
               className={cn(
-                "text-primary font-bold text-base transition-all duration-300 ease-in-out",
+                "text-primary font-bold text-base transition-all duration-300 ease-in-out truncate",
                 sidebarIsOpen ? "opacity-100 translate-x-0" : "opacity-0 invisible -translate-x-10 w-0",
               )}
             >
-              TECH
+              {mounted ? (session?.name || "Admin") : "Admin"}
             </span>
           </div>
         )}
@@ -175,17 +176,8 @@ const Sidebar = ({ menuItemsData }: SidebarProps) => {
             </TooltipProvider>
           )}
 
-          <Button
-            className="hover:bg-transparent"
-            onClick={() => setAppSelectorOpen(true)}
-            size="icon"
-            variant="ghost"
-          >
-            <Menu className="text-muted-foreground" size={20} />
-          </Button>
         </div>
       </div>
-      <AppSelectorDialog isOpen={appSelectorOpen} onOpenChange={setAppSelectorOpen} />
     </aside>
   );
 };

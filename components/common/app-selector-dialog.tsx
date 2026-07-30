@@ -40,18 +40,17 @@ const AppSelectorDialog = ({ isOpen, onOpenChange }: Props) => {
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-md p-6">
           <DialogHeader className="items-center text-center space-y-2 mb-4">
-            <Building2 className="size-10 text-muted-foreground" />
             <DialogTitle className="text-xl font-semibold">
-              TECH Horizon
+              IIT E-Learning
             </DialogTitle>
             <DialogDescription className="text-sm">
-              Manage your workspaces
+              Select an application
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              Workspaces
+              Applications
             </p>
 
             <ScrollArea className="h-[185px] rounded-lg border">

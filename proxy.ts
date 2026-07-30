@@ -6,7 +6,7 @@ export const proxy = async (request: NextRequest) => {
     const cspHeader = `
     base-uri 'self';
     block-all-mixed-content;
-    connect-src 'self' blob: data: ${process.env.NEXT_PUBLIC_API_URL};
+    connect-src 'self' blob: data: ${process.env.NEXT_PUBLIC_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:9070'};
     default-src 'self' blob: data:;
     font-src 'self' https://fonts.gstatic.com;
     form-action 'self';

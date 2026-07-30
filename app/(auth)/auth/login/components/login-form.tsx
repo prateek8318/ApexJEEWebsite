@@ -24,15 +24,19 @@ import { encrypt } from "@lib/encrypt";
 import axios from "@config/axios";
 import { AxiosError } from "axios";
 import { useMutation } from "@tanstack/react-query";
+import { authApi } from "@lib/api/admin";
+import { userAuthApi } from "@lib/api/user/auth";
+import useSession from "@stores/session";
 
 type LoginFormProps = { userType?: "student" | "tutor" | "admin" };
 
 const LoginForm = ({
-  userType: _userType = "student",
+  userType = "student",
 }: LoginFormProps = {}) => {
   // _userType reserved for future role-specific customization
   const { inputIcon, inputType } = usePasswordToggle();
   const router = useRouter();
+  const { setSession } = useSession();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl");
   const [onLoginToast, setOnLoginToast] = useState<string | number>();
@@ -52,32 +56,47 @@ const LoginForm = ({
     setOnLoginToast(
       toast.loading("Loading...", { description: "Logging in..." }),
     );
-    const { email } = values;
-    const password = encrypt(values?.password);
-    console.log(email, password);
-    await axios.post("/api/auth/login", { email, password });
-    return values;
+    const { email, password } = values;
+
+    if (userType === "admin") {
+      const response = await authApi.login({ email, password });
+      return response;
+    } else {
+      // Hit the new student login endpoint
+      const response = await userAuthApi.login({ email, password });
+      return { response, values };
+    }
   };
 
   const { mutate, isPending } = useMutation({
     mutationFn: onLogin,
-    onSuccess: (values: z.infer<typeof LoginSchema>) => {
+    onSuccess: (response: any) => {
       toast.dismiss(onLoginToast);
-      if (callbackUrl) {
-        router.replace(
-          `/auth/verify?callbackUrl=${encodeURIComponent(callbackUrl)}&email=${encodeURIComponent(values?.email)}&type=VERIFICATION`,
-        );
+      
+      if (userType === "admin") {
+        setSession(response?.data?.user || response?.user || { name: "Admin" });
+        toast.success("Login successful!");
+        router.replace("/admin/dashboard"); // Redirect to admin dashboard
       } else {
-        router.replace(
-          `/auth/verify?email=${encodeURIComponent(values?.email)}&type=VERIFICATION`,
-        );
+        const values = (response as any)?.values || response;
+        // set session and redirect to dashboard
+        setSession((response as any)?.response?.data?.user || (response as any)?.response?.user || { name: values?.email || "Student" });
+        toast.success("Login successful!");
+        
+        if (callbackUrl) {
+          router.replace(callbackUrl);
+        } else {
+          router.replace("/dashboard");
+        }
       }
     },
     onError: (error: unknown) => {
       toast.error("Error!", {
         id: onLoginToast,
         description:
-          ((error as AxiosError)?.response?.data as string) ||
+          (typeof (error as AxiosError)?.response?.data === "string"
+            ? (error as AxiosError).response?.data
+            : ((error as AxiosError)?.response?.data as any)?.message) ||
           "Internal server error!",
       });
     },

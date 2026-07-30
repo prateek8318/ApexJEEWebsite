@@ -24,6 +24,7 @@ import {
   FormMessage,
 } from "@components/ui/form";
 import { encrypt } from "@lib/encrypt";
+import { userAuthApi } from "@lib/api/user/auth";
 import { RegisterSchema } from "@schemas/register";
 import usePasswordToggle from "@hooks/usePasswordToggle";
 
@@ -55,25 +56,25 @@ const RegisterForm = () => {
     });
     setRegisterToastId(toastId);
 
-    const password = encrypt(values.password);
-
-    await axios.post("/api/auth/register", {
-      fullName: values.fullName,
+    // Call the new user auth api which expects: name, email, phone, password
+    const response = await userAuthApi.signUp({
+      name: values.fullName,
       email: values.email,
-      mobileNumber: values.mobileNumber,
-      password,
-      referralCode: values.referralCode || undefined,
+      phone: values.mobileNumber,
+      password: values.password, // Backend might hash it or we send plain, schema shows no encrypt yet
     });
+    
+    return { response, email: values.email };
   };
 
   const { mutate, isPending } = useMutation({
     mutationFn: onRegister,
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       toast.success("Success!", {
         id: registerToastId,
-        description: "Account created successfully.",
+        description: data?.response?.message || "Account created successfully.",
       });
-      router.push("/auth/verify");
+      router.push(`/auth/verify?email=${encodeURIComponent(data?.email || "")}&type=VERIFICATION`);
     },
     onError: (error: unknown) => {
       toast.error("Registration failed", {

@@ -45,8 +45,21 @@ type MenuIconProps = {
 
 const MenuIcon = ({ src }: MenuIconProps) => {
   switch (src) {
+    case "/admin/dashboard":
     case "/dashboard":
       return <LayoutDashboard />;
+    case "/admin/subjects":
+      return <BookOpen />;
+    case "/admin/chapters":
+      return <Layers />;
+    case "/admin/topics":
+      return <Library />;
+    case "/admin/questions":
+      return <HelpCircle />;
+    case "/admin/videos":
+      return <Video />;
+    case "/admin/notes":
+      return <FileText />;
     case "/self-learning":
       return <BookOpenText />;
     case "/study-materials":

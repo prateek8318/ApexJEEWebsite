@@ -40,7 +40,7 @@ export const metadata: Metadata = {
       "/icons/icon-512x512.png",
     ],
   },
-  metadataBase: new URL(process.env.NEXT_PUBLIC_URL as string),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_URL || "http://localhost:3000"),
   openGraph: {
     description: APP_DESCRIPTION,
     images: [

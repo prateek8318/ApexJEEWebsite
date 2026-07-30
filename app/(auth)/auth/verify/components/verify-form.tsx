@@ -9,6 +9,7 @@ import { useMutation } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter, useSearchParams } from "next/navigation";
 import useSession from "@stores/session";
+import { userAuthApi } from "@lib/api/user/auth";
 import useCounter from "@hooks/useCounter";
 import { toast } from "@components/ui/toaster";
 import { Button } from "@components/ui/button";
@@ -83,10 +84,9 @@ const VerifyForm = ({ email, type }: VerifyFormProps) => {
       toast.loading("Loading...", { description: "Verifying OTP..." }),
     );
     const { otp } = values;
-    const response = await axios.post("/api/otp/verify-otp", {
+    const response = await userAuthApi.verifyOtp({
       email,
       otp,
-      type,
     });
     if (type === "VERIFICATION") {
       return response.data;
