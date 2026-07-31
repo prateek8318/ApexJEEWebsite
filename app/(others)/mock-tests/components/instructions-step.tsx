@@ -8,23 +8,56 @@ import { Button } from "@components/ui/button";
 import { Checkbox } from "@components/ui/checkbox";
 import { Badge } from "@components/ui/badge";
 import { Card } from "@components/ui/card";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { userTestApi } from "@/lib/api/user/test";
+import { userTestAttemptApi } from "@/lib/api/user/test-attempt";
+import { Loader2 } from "lucide-react";
 
 interface InstructionsStepProps {
+  testId: string;
   testTitle: string;
   onBack: () => void;
-  onBeginTest: () => void;
+  onBeginTest: (attemptId: string) => void;
 }
 
-export default function InstructionsStep({ testTitle, onBack, onBeginTest }: InstructionsStepProps) {
+export default function InstructionsStep({ testId, testTitle, onBack, onBeginTest }: InstructionsStepProps) {
   const [agreed, setAgreed] = useState(false);
+  const { data: testData, isLoading } = useQuery({
+    queryKey: ["test", testId],
+    queryFn: () => userTestApi.getTestById(testId),
+    enabled: !!testId,
+  });
 
-  const infoBadges = [
-    "3 hours",
-    "20 Questions",
-    "300 Marks",
-    "JEE Main Pattern",
-    "-1 per wrong answer"
-  ];
+  const startMutation = useMutation({
+    mutationFn: () => userTestAttemptApi.startTestAttempt(testId),
+    onSuccess: (res) => {
+      if (res.data?._id) {
+        onBeginTest(res.data._id);
+      }
+    },
+  });
+
+  const test = testData?.data;
+
+  const infoBadges = test ? [
+    `${test.durationMins} mins`,
+    `${test.totalQuestions} Questions`,
+    `${test.totalMarks} Marks`,
+    test.testCategory.toUpperCase(),
+    test.negativeMarking ? "Negative Marking" : "No Negative Marking"
+  ] : [];
+
+  const handleStart = () => {
+    startMutation.mutate();
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background p-6 md:p-8 text-foreground">
@@ -57,7 +90,7 @@ export default function InstructionsStep({ testTitle, onBack, onBeginTest }: Ins
           <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Time Limit</span>
           <div className="mt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="inline-flex items-center justify-center bg-slate-900 text-yellow-400 font-mono text-2xl font-bold tracking-widest px-6 py-2.5 rounded-2xl border border-slate-800 shadow-inner">
-              03:00:00
+              {test?.durationMins ? `${Math.floor(test.durationMins / 60).toString().padStart(2, '0')}:${(test.durationMins % 60).toString().padStart(2, '0')}:00` : "00:00:00"}
             </div>
             <div className="text-muted-foreground text-xs sm:max-w-md">
               <span className="font-semibold text-foreground">Timer starts when you click Begin Test.</span><br />
@@ -132,17 +165,12 @@ export default function InstructionsStep({ testTitle, onBack, onBeginTest }: Ins
             </h2>
             <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
               <div className="flex justify-between items-center text-sm">
-                <span className="font-semibold text-slate-700">Physics</span>
-                <span className="text-slate-500">10 Questions: MCQ + Numerical types (4 marks each, -1 for wrong MCQ)</span>
-              </div>
-              <div className="h-px bg-slate-200" />
-              <div className="flex justify-between items-center text-sm">
-                <span className="font-semibold text-slate-700">Mathematics</span>
-                <span className="text-slate-500">10 Questions: MCQ + Numerical types (4 marks each, -1 for wrong MCQ)</span>
+                <span className="font-semibold text-slate-700">Questions</span>
+                <span className="text-slate-500">{test?.totalQuestions} Questions</span>
               </div>
               <div className="h-px bg-slate-200" />
               <div className="text-[10px] text-slate-400">
-                Total: 20 Questions • 300 Marks (scaled)
+                Total: {test?.totalQuestions} Questions • {test?.totalMarks} Marks
               </div>
             </div>
           </div>
@@ -162,16 +190,21 @@ export default function InstructionsStep({ testTitle, onBack, onBeginTest }: Ins
             </label>
           </div>
 
+          {startMutation.isError && (
+            <div className="w-full sm:w-auto text-red-500 text-sm font-medium">
+              Error starting test. Please try again.
+            </div>
+          )}
           <Button 
-            disabled={!agreed}
-            onClick={onBeginTest}
+            disabled={!agreed || startMutation.isPending}
+            onClick={handleStart}
             className={`w-full sm:w-auto font-bold text-sm py-5 px-8 rounded-xl shadow transition-all duration-200 cursor-pointer flex items-center justify-center gap-2 ${
               agreed 
                 ? "bg-amber-500 hover:bg-amber-600 text-white hover:shadow-amber-500/20 active:scale-[0.98]" 
                 : "bg-slate-200 text-slate-400 cursor-not-allowed"
             }`}
           >
-            Begin Test
+            {startMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Begin Test"}
           </Button>
         </div>
 

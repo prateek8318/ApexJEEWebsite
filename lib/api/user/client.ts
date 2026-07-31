@@ -12,6 +12,19 @@ export const userClient = axios.create({
 
 userClient.interceptors.request.use(
   (config) => {
+    try {
+      if (typeof window !== "undefined") {
+        const storage = localStorage.getItem("AuthSession");
+        if (storage) {
+          const { state } = JSON.parse(storage);
+          if (state?.session?.token) {
+            config.headers.Authorization = `Bearer ${state.session.token}`;
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error reading token from local storage:", error);
+    }
     return config;
   },
   (error) => {

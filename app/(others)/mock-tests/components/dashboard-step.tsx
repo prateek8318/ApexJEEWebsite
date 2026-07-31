@@ -22,6 +22,9 @@ import {
   TableRow,
 } from "@components/ui/table";
 import { Progress } from "@components/ui/progress";
+import { useQuery } from "@tanstack/react-query";
+import { userTestApi } from "@/lib/api/user/test";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface DashboardStepProps {
   onStartTest: (testId: string, testTitle: string) => void;
@@ -43,17 +46,19 @@ export default function DashboardStep({ onStartTest }: DashboardStepProps) {
     { name: "Mock Test JEE Main #4", date: "7 Mar 2026", phy: 87, mat: 71, total: 158, rank: "#6,620" },
   ];
 
-  const availableMainTests = [
-    { id: "jee-main-8", num: "#8", title: "Mock Test JEE Main #8", qs: 20, marks: 300, negative: "-1 per wrong" },
-    { id: "jee-main-9", num: "#9", title: "Mock Test JEE Main #9", qs: 20, marks: 300, negative: "-1 per wrong" },
-    { id: "jee-main-10", num: "#10", title: "Mock Test JEE Main #10", qs: 20, marks: 300, negative: "-1 per wrong" },
-  ];
 
-  const availableAdvTests = [
-    { id: "jee-adv-3", num: "#3", title: "Mock Test JEE Advance #3", qs: 30, marks: 300, negative: "-1 per wrong" },
-    { id: "jee-adv-4", num: "#4", title: "Mock Test JEE Advance #4", qs: 30, marks: 300, negative: "-1 per wrong" },
-    { id: "jee-adv-5", num: "#5", title: "Mock Test JEE Advance #5", qs: 30, marks: 300, negative: "-1 per wrong" },
-  ];
+  const { data: testsData, isLoading } = useQuery({
+    queryKey: ["available-mock-tests"],
+    queryFn: () => userTestApi.getAllTests({ limit: 20 }),
+  });
+
+  const availableTests = testsData?.data || [];
+
+  const dynamicMainTests = availableTests.filter((t) => t.examTag?.toLowerCase().includes("main"));
+  const dynamicAdvTests = availableTests.filter((t) => t.examTag?.toLowerCase().includes("advance"));
+  const otherTests = availableTests.filter(
+    (t) => !t.examTag?.toLowerCase().includes("main") && !t.examTag?.toLowerCase().includes("advance")
+  );
 
   return (
     <div className="min-h-screen bg-background p-6 md:p-8 text-foreground">
@@ -179,91 +184,155 @@ export default function DashboardStep({ onStartTest }: DashboardStepProps) {
                 </div>
                 <div>
                   <h2 className="text-lg font-bold text-card-foreground">Available Tests</h2>
-                  <p className="text-xs text-muted-foreground">6 tests available to take</p>
+                  <p className="text-xs text-muted-foreground">{availableTests.length} tests available to take</p>
                 </div>
               </div>
               <Badge variant="outline" className="px-3 py-1 bg-amber-50 text-amber-600 text-[10px] font-bold uppercase tracking-wider border border-amber-100">
-                6 Remaining
+                {availableTests.length} Remaining
               </Badge>
             </div>
 
             {/* Test Categories */}
             <div className="mt-6 space-y-6 flex-1 overflow-y-auto max-h-[480px] pr-1 scrollbar-thin">
-              {/* JEE MAIN */}
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="h-1.5 w-1.5 rounded-full bg-indigo-500"></span>
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">JEE MAIN</span>
-                </div>
-                <div className="space-y-3">
-                  {availableMainTests.map((test) => (
-                    <div 
-                      key={test.id} 
-                      className="flex items-center justify-between p-3.5 bg-slate-50 hover:bg-slate-100/70 border border-slate-100 rounded-2xl transition-all duration-200 group"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-50 font-bold text-orange-500 text-sm">
-                          {test.num}
-                        </div>
-                        <div>
-                          <div className="font-semibold text-slate-800 text-sm leading-tight">{test.title}</div>
-                          <div className="flex items-center gap-2 mt-1 text-[10px] text-muted-foreground">
-                            <span>{test.qs} Qs</span>
-                            <span>•</span>
-                            <span>{test.marks} Marks</span>
-                            <span>•</span>
-                            <span className="text-red-400">{test.negative}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <Button 
-                        onClick={() => onStartTest(test.id, test.title)}
-                        className="bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs py-2 h-9 px-4 rounded-xl shadow-sm hover:shadow-amber-500/20 active:scale-[0.98] transition-all cursor-pointer"
-                      >
-                        Start Test
-                      </Button>
-                    </div>
+              {isLoading && (
+                <div className="space-y-4">
+                  {[1, 2, 3].map((i) => (
+                    <Skeleton key={i} className="h-20 w-full rounded-2xl bg-slate-100" />
                   ))}
                 </div>
-              </div>
+              )}
+
+              {!isLoading && availableTests.length === 0 && (
+                <div className="text-center py-12 text-slate-500">
+                  No tests are currently available.
+                </div>
+              )}
+
+              {/* JEE MAIN */}
+              {dynamicMainTests.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="h-1.5 w-1.5 rounded-full bg-indigo-500"></span>
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">JEE MAIN</span>
+                  </div>
+                  <div className="space-y-3">
+                    {dynamicMainTests.map((test, idx) => (
+                      <div 
+                        key={test._id} 
+                        className="flex items-center justify-between p-3.5 bg-slate-50 hover:bg-slate-100/70 border border-slate-100 rounded-2xl transition-all duration-200 group"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-50 font-bold text-orange-500 text-sm flex-shrink-0">
+                            #{idx + 1}
+                          </div>
+                          <div>
+                            <div className="font-semibold text-slate-800 text-sm leading-tight">{test.title}</div>
+                            <div className="flex flex-wrap items-center gap-2 mt-1 text-[10px] text-muted-foreground">
+                              <span>{test.totalQuestions} Qs</span>
+                              <span>•</span>
+                              <span>{test.totalMarks} Marks</span>
+                              <span>•</span>
+                              <span>{test.durationMins} Mins</span>
+                              {test.negativeMarking && (
+                                <>
+                                  <span>•</span>
+                                  <span className="text-red-400">Negative Marking</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <Button 
+                          onClick={() => onStartTest(test._id, test.title)}
+                          className="bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs py-2 h-9 px-4 rounded-xl shadow-sm hover:shadow-amber-500/20 active:scale-[0.98] transition-all cursor-pointer flex-shrink-0"
+                        >
+                          Start
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* JEE ADVANCED */}
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="h-1.5 w-1.5 rounded-full bg-indigo-500"></span>
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">JEE ADVANCED</span>
-                </div>
-                <div className="space-y-3">
-                  {availableAdvTests.map((test) => (
-                    <div 
-                      key={test.id} 
-                      className="flex items-center justify-between p-3.5 bg-slate-50 hover:bg-slate-100/70 border border-slate-100 rounded-2xl transition-all duration-200 group"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 font-bold text-indigo-500 text-sm">
-                          {test.num}
-                        </div>
-                        <div>
-                          <div className="font-semibold text-slate-800 text-sm leading-tight">{test.title}</div>
-                          <div className="flex items-center gap-2 mt-1 text-[10px] text-muted-foreground">
-                            <span>{test.qs} Qs</span>
-                            <span>•</span>
-                            <span>{test.marks} Marks</span>
-                            <span>•</span>
-                            <span className="text-red-400">{test.negative}</span>
+              {dynamicAdvTests.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-3 mt-6">
+                    <span className="h-1.5 w-1.5 rounded-full bg-indigo-500"></span>
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">JEE ADVANCED</span>
+                  </div>
+                  <div className="space-y-3">
+                    {dynamicAdvTests.map((test, idx) => (
+                      <div 
+                        key={test._id} 
+                        className="flex items-center justify-between p-3.5 bg-slate-50 hover:bg-slate-100/70 border border-slate-100 rounded-2xl transition-all duration-200 group"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 font-bold text-indigo-500 text-sm flex-shrink-0">
+                            #{idx + 1}
+                          </div>
+                          <div>
+                            <div className="font-semibold text-slate-800 text-sm leading-tight">{test.title}</div>
+                            <div className="flex flex-wrap items-center gap-2 mt-1 text-[10px] text-muted-foreground">
+                              <span>{test.totalQuestions} Qs</span>
+                              <span>•</span>
+                              <span>{test.totalMarks} Marks</span>
+                              <span>•</span>
+                              <span>{test.durationMins} Mins</span>
+                            </div>
                           </div>
                         </div>
+                        <Button 
+                          onClick={() => onStartTest(test._id, test.title)}
+                          className="bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs py-2 h-9 px-4 rounded-xl shadow-sm hover:shadow-amber-500/20 active:scale-[0.98] transition-all cursor-pointer flex-shrink-0"
+                        >
+                          Start
+                        </Button>
                       </div>
-                      <Button 
-                        onClick={() => onStartTest(test.id, test.title)}
-                        className="bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs py-2 h-9 px-4 rounded-xl shadow-sm hover:shadow-amber-500/20 active:scale-[0.98] transition-all cursor-pointer"
-                      >
-                        Start Advanced
-                      </Button>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {/* OTHER TESTS */}
+              {otherTests.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-3 mt-6">
+                    <span className="h-1.5 w-1.5 rounded-full bg-indigo-500"></span>
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">OTHER TESTS</span>
+                  </div>
+                  <div className="space-y-3">
+                    {otherTests.map((test, idx) => (
+                      <div 
+                        key={test._id} 
+                        className="flex items-center justify-between p-3.5 bg-slate-50 hover:bg-slate-100/70 border border-slate-100 rounded-2xl transition-all duration-200 group"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-200 font-bold text-slate-600 text-sm flex-shrink-0">
+                            #{idx + 1}
+                          </div>
+                          <div>
+                            <div className="font-semibold text-slate-800 text-sm leading-tight">{test.title}</div>
+                            <div className="flex flex-wrap items-center gap-2 mt-1 text-[10px] text-muted-foreground">
+                              <span>{test.totalQuestions} Qs</span>
+                              <span>•</span>
+                              <span>{test.totalMarks} Marks</span>
+                              <span>•</span>
+                              <span>{test.durationMins} Mins</span>
+                            </div>
+                          </div>
+                        </div>
+                        <Button 
+                          onClick={() => onStartTest(test._id, test.title)}
+                          className="bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs py-2 h-9 px-4 rounded-xl shadow-sm hover:shadow-amber-500/20 active:scale-[0.98] transition-all cursor-pointer flex-shrink-0"
+                        >
+                          Start
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </Card>
 

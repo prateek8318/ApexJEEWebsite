@@ -6,10 +6,10 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { useMutation } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { encrypt } from "@lib/encrypt";
+
 import { ResetPasswordSchema } from "@schemas/resetPassword";
 import { Input } from "@components/ui/input";
-import axios from "@config/axios";
+import { userAuthApi } from "@lib/api/user/auth";
 import { Button } from "@components/ui/button";
 import { toast } from "@components/ui/toaster";
 import {
@@ -28,7 +28,7 @@ type ResetPasswordFormProps = {
   otp: string;
 };
 
-const ResetPasswordForm = ({ email, otp }: ResetPasswordFormProps) => {
+const ResetPasswordForm = ({ email, otp: _otp }: ResetPasswordFormProps) => {
   const router = useRouter();
   const [onResetToast, setOnResetToast] = useState<string | number>();
   const { inputIcon: pwdIcon, inputType: pwdType } = usePasswordToggle();
@@ -50,8 +50,7 @@ const ResetPasswordForm = ({ email, otp }: ResetPasswordFormProps) => {
     setOnResetToast(
       toast.loading("Loading...", { description: "Resetting password..." }),
     );
-    const newPassword = encrypt(values?.newPassword);
-    await axios.post("/api/user/reset-password", { email, newPassword, otp });
+    await userAuthApi.resetPassword({ identifier: email, password: values?.newPassword });
   };
 
   const { mutate, isPending } = useMutation({

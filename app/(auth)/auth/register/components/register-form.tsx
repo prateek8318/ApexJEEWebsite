@@ -8,7 +8,6 @@ import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { ArrowRight } from "lucide-react";
-import axios from "@config/axios";
 import type { AxiosError } from "axios";
 import { Input } from "@components/ui/input";
 import { Button } from "@components/ui/button";
@@ -23,7 +22,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@components/ui/form";
-import { encrypt } from "@lib/encrypt";
 import { userAuthApi } from "@lib/api/user/auth";
 import { RegisterSchema } from "@schemas/register";
 import usePasswordToggle from "@hooks/usePasswordToggle";
@@ -80,7 +78,9 @@ const RegisterForm = () => {
       toast.error("Registration failed", {
         id: registerToastId,
         description:
-          ((error as AxiosError)?.response?.data as string) ||
+          (typeof (error as AxiosError)?.response?.data === "string"
+            ? (error as AxiosError).response?.data as string
+            : ((error as AxiosError)?.response?.data as any)?.message) ||
           "Internal server error!",
       });
     },

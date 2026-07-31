@@ -27,8 +27,8 @@ const MenuItem = ({ menuItem, sidebarIsOpen = true }: MenuItemProps) => {
             className={cn(
               sidebarIsOpen && "w-full justify-start transition-all duration-200",
               path.includes(menuItem?.src)
-                ? "bg-accent text-primary font-semibold shadow-sm hover:bg-accent/90 hover:text-primary"
-                : "text-accent hover:bg-accent/10 hover:text-accent",
+                ? "bg-white/10 text-white font-semibold border-l-4 border-yellow-500 rounded-l-none hover:bg-white/15"
+                : "text-slate-300 hover:bg-slate-800/50 hover:text-amber-400",
             )}
             size={sidebarIsOpen ? "default" : "icon"}
             variant={path.includes(menuItem?.src) ? "default" : "ghost"}

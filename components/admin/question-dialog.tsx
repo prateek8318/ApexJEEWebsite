@@ -29,13 +29,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Chapter, Subject, Topic, Question } from "@/types/admin-api";
 import { useQuery } from "@tanstack/react-query";
 import { subjectsApi } from "@/lib/api/admin/subjects";
 import { chaptersApi } from "@/lib/api/admin/chapters";
 import { topicsApi } from "@/lib/api/admin/topics";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, ImageIcon, ImagePlus } from "lucide-react";
 
 const questionSchema = z.object({
   subject: z.string().min(1, "Subject is required."),
@@ -83,20 +84,23 @@ export default function QuestionDialog({
   
   const [selectedSubject, setSelectedSubject] = useState<string>("");
   const [selectedChapter, setSelectedChapter] = useState<string>("");
+  
+  const [qPreviewUrl, setQPreviewUrl] = useState<string | null>(null);
+  const [ePreviewCount, setEPreviewCount] = useState<number>(0);
 
-  const { data: subjectsData } = useQuery({
+  const { data: subjectsData, isLoading: isLoadingSubjects } = useQuery({
     queryKey: ["admin-subjects"],
     queryFn: () => subjectsApi.getAllSubjects(),
     enabled: isOpen,
   });
 
-  const { data: chaptersData, isLoading: isChaptersLoading } = useQuery({
+  const { data: chaptersData, isLoading: isLoadingChapters } = useQuery({
     queryKey: ["admin-chapters-by-subject", selectedSubject],
     queryFn: () => chaptersApi.getAllChapters({ subject: selectedSubject }), 
     enabled: isOpen && !!selectedSubject,
   });
 
-  const { data: topicsData, isLoading: isTopicsLoading } = useQuery({
+  const { data: topicsData, isLoading: isLoadingTopics } = useQuery({
     queryKey: ["admin-topics-by-chapter", selectedChapter],
     queryFn: () => topicsApi.getAllTopics({ chapter: selectedChapter }), 
     enabled: isOpen && !!selectedChapter,
@@ -107,7 +111,7 @@ export default function QuestionDialog({
   const topics: Topic[] = topicsData?.data || [];
 
   const form = useForm<QuestionFormValues>({
-    resolver: zodResolver(questionSchema),
+    resolver: zodResolver(questionSchema as any),
     defaultValues: {
       subject: "",
       chapter: "",
@@ -147,6 +151,13 @@ export default function QuestionDialog({
       setSelectedSubject(subjectId);
       setSelectedChapter(chapterId);
 
+      setQPreviewUrl(
+        editingQuestion.questionImage 
+          ? (typeof editingQuestion.questionImage === 'string' ? editingQuestion.questionImage : (editingQuestion.questionImage as any).url)
+          : null
+      );
+      setEPreviewCount(editingQuestion.explanationImage?.length || 0);
+
       form.reset({
         subject: subjectId,
         chapter: chapterId,
@@ -171,6 +182,8 @@ export default function QuestionDialog({
     } else {
       setSelectedSubject("");
       setSelectedChapter("");
+      setQPreviewUrl(null);
+      setEPreviewCount(0);
       form.reset({
         subject: "",
         chapter: "",
@@ -193,6 +206,12 @@ export default function QuestionDialog({
         isActive: true,
       });
     }
+    
+    return () => {
+      if (qPreviewUrl && qPreviewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(qPreviewUrl);
+      }
+    };
   }, [editingQuestion, form, isOpen]);
 
   const toggleAnswer = (index: number) => {
@@ -220,26 +239,30 @@ export default function QuestionDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{editingQuestion ? "Edit Question" : "Add Question"}</DialogTitle>
-          <DialogDescription>
-            {editingQuestion
-              ? "Make changes to the question details here."
-              : "Fill in the details to create a new question."}
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="sm:max-w-[850px] p-0 max-h-[90vh] overflow-y-auto bg-white">
+        <div className="px-10 pt-10 pb-6 border-b border-slate-100">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold tracking-tight text-slate-900">
+              {editingQuestion ? "Edit Question" : "Add Question"}
+            </DialogTitle>
+            <DialogDescription className="text-slate-500 mt-2 text-base">
+              {editingQuestion
+                ? "Make changes to the question details here."
+                : "Fill in the details below to create a new question for the question bank."}
+            </DialogDescription>
+          </DialogHeader>
+        </div>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(handleFormSubmit)} className="px-10 py-8 space-y-8">
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               <FormField
                 control={form.control}
                 name="subject"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Subject <span className="text-destructive">*</span></FormLabel>
+                  <FormItem className="space-y-2.5">
+                    <FormLabel className="text-slate-700 font-semibold text-sm block mb-2">Subject <span className="text-destructive">*</span></FormLabel>
                     <Select 
                       onValueChange={(val) => {
                         field.onChange(val);
@@ -249,9 +272,10 @@ export default function QuestionDialog({
                         form.setValue("topic", "");
                       }} 
                       value={field.value} 
+                      disabled={isLoadingSubjects}
                     >
                       <FormControl>
-                        <SelectTrigger>
+                        <SelectTrigger className="h-12 px-4 bg-white border-slate-200 shadow-sm focus:ring-blue-500 text-base mt-2">
                           <SelectValue placeholder="Select subject" />
                         </SelectTrigger>
                       </FormControl>
@@ -270,8 +294,8 @@ export default function QuestionDialog({
                 control={form.control}
                 name="chapter"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Chapter <span className="text-destructive">*</span></FormLabel>
+                  <FormItem className="space-y-2.5">
+                    <FormLabel className="text-slate-700 font-semibold text-sm block mb-2">Chapter <span className="text-destructive">*</span></FormLabel>
                     <Select 
                       onValueChange={(val) => {
                         field.onChange(val);
@@ -279,10 +303,10 @@ export default function QuestionDialog({
                         form.setValue("topic", "");
                       }} 
                       value={field.value} 
-                      disabled={!selectedSubject}
+                      disabled={isLoadingChapters || !selectedSubject}
                     >
                       <FormControl>
-                        <SelectTrigger>
+                        <SelectTrigger className="h-12 px-4 bg-white border-slate-200 shadow-sm focus:ring-blue-500 text-base mt-2">
                           <SelectValue placeholder={selectedSubject ? "Select chapter" : "Wait..."} />
                         </SelectTrigger>
                       </FormControl>
@@ -301,11 +325,11 @@ export default function QuestionDialog({
                 control={form.control}
                 name="topic"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Topic <span className="text-destructive">*</span></FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value} disabled={!selectedChapter}>
+                  <FormItem className="space-y-2.5">
+                    <FormLabel className="text-slate-700 font-semibold text-sm block mb-2">Topic <span className="text-destructive">*</span></FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingTopics || !selectedChapter}>
                       <FormControl>
-                        <SelectTrigger>
+                        <SelectTrigger className="h-12 px-4 bg-white border-slate-200 shadow-sm focus:ring-blue-500 text-base mt-2">
                           <SelectValue placeholder={selectedChapter ? "Select topic" : "Wait..."} />
                         </SelectTrigger>
                       </FormControl>
@@ -325,23 +349,27 @@ export default function QuestionDialog({
               control={form.control}
               name="questionText"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Question Text <span className="text-destructive">*</span></FormLabel>
+                <FormItem className="space-y-2.5">
+                  <FormLabel className="text-slate-700 font-semibold text-sm block mb-2">Question Text <span className="text-destructive">*</span></FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Write the question here (LaTeX supported if implemented)..." className="min-h-[100px]" {...field} />
+                    <Textarea 
+                      placeholder="Write the question here (LaTeX supported if implemented)..." 
+                      className="min-h-[120px] px-4 py-3 bg-white border-slate-200 shadow-sm focus-visible:ring-blue-500 text-base mt-2 resize-y" 
+                      {...field} 
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                <FormField
                 control={form.control}
                 name="questionType"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Question Type <span className="text-destructive">*</span></FormLabel>
+                  <FormItem className="space-y-2.5">
+                    <FormLabel className="text-slate-700 font-semibold text-sm block mb-2">Question Type <span className="text-destructive">*</span></FormLabel>
                     <Select 
                       onValueChange={(val) => {
                         field.onChange(val);
@@ -351,7 +379,7 @@ export default function QuestionDialog({
                       value={field.value}
                     >
                       <FormControl>
-                        <SelectTrigger>
+                        <SelectTrigger className="h-12 px-4 bg-white border-slate-200 shadow-sm focus:ring-blue-500 text-base mt-2">
                           <SelectValue placeholder="Select type" />
                         </SelectTrigger>
                       </FormControl>
@@ -370,15 +398,41 @@ export default function QuestionDialog({
                 control={form.control}
                 name="questionImage"
                 render={({ field: { value, onChange, ...field } }) => (
-                  <FormItem>
-                    <FormLabel>Question Image (Optional)</FormLabel>
+                  <FormItem className="space-y-2.5">
+                    <FormLabel className="text-slate-700 font-semibold text-sm block mb-2">Question Image (Optional)</FormLabel>
                     <FormControl>
-                      <Input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => onChange(e.target.files)}
-                        {...field}
-                      />
+                      <div className="relative group mt-2 h-16">
+                        <div className="absolute inset-0 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50 flex items-center justify-center overflow-hidden transition-colors group-hover:border-slate-300 group-hover:bg-slate-100">
+                          {qPreviewUrl ? (
+                            <img src={qPreviewUrl} alt="Question preview" className="w-full h-full object-cover opacity-60" />
+                          ) : (
+                            <div className="flex items-center gap-2 text-slate-500">
+                              <ImageIcon className="w-5 h-5" />
+                              <span className="text-sm font-semibold">Upload Image</span>
+                            </div>
+                          )}
+                          {qPreviewUrl && (
+                             <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                               <span className="text-white text-sm font-semibold">Change Image</span>
+                             </div>
+                          )}
+                        </div>
+                        <Input
+                          type={"file" as any}
+                          accept="image/*"
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                          onChange={(e) => {
+                            const files = e.target.files;
+                            onChange(files);
+                            if (files && files.length > 0) {
+                              const newUrl = URL.createObjectURL(files[0]);
+                              if (qPreviewUrl && qPreviewUrl.startsWith('blob:')) URL.revokeObjectURL(qPreviewUrl);
+                              setQPreviewUrl(newUrl);
+                            }
+                          }}
+                          {...field}
+                        />
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -386,41 +440,56 @@ export default function QuestionDialog({
               />
             </div>
 
-            <div className="border rounded-md p-4 bg-muted/30">
-              <h3 className="font-semibold mb-4">Answers & Options</h3>
+            <div className="border border-slate-200 rounded-2xl p-6 bg-slate-50/50 shadow-sm mt-4">
+              <h3 className="text-slate-900 font-bold text-lg mb-6">Answers & Options</h3>
               
               {(questionType === "single" || questionType === "multiple") ? (
-                <div className="space-y-4">
+                <div className="space-y-5">
                   {optionFields.map((field, index) => (
-                    <div key={field.id} className="flex items-center gap-2">
-                      <Checkbox 
-                        checked={currentAnswers.includes(index)}
-                        onCheckedChange={() => toggleAnswer(index)}
-                      />
+                    <div key={field.id} className="flex items-center gap-4 bg-white p-3 rounded-xl border border-slate-200 shadow-sm transition-all hover:border-slate-300">
+                      <div className="flex items-center justify-center bg-slate-100 rounded-lg p-2 h-12 w-12 shrink-0">
+                        <Checkbox 
+                          checked={currentAnswers.includes(index)}
+                          onCheckedChange={() => toggleAnswer(index)}
+                          className="w-5 h-5 data-[state=checked]:bg-blue-600 border-slate-300"
+                        />
+                      </div>
                       <FormField
                         control={form.control}
                         name={`options.${index}.value`}
                         render={({ field: inputField }) => (
                           <FormItem className="flex-1 space-y-0">
                             <FormControl>
-                              <Input placeholder={`Option ${index + 1}`} {...inputField} />
+                              <Input 
+                                placeholder={`Option ${String.fromCharCode(65 + index)}`} 
+                                className="h-12 border-none shadow-none focus-visible:ring-0 text-base px-2" 
+                                {...inputField} 
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
                       {optionFields.length > 2 && (
-                        <Button type="button" variant="ghost" size="icon" onClick={() => removeOption(index)} className="text-destructive">
-                          <Trash2 className="h-4 w-4" />
+                        <Button type="button" variant="ghost" size="icon" onClick={() => removeOption(index)} className="text-slate-400 hover:text-red-600 hover:bg-red-50 h-10 w-10 shrink-0">
+                          <Trash2 className="h-5 w-5" />
                         </Button>
                       )}
                     </div>
                   ))}
-                  <Button type="button" variant="outline" size="sm" onClick={() => appendOption({ value: "" })}>
-                    <Plus className="mr-2 h-4 w-4" /> Add Option
-                  </Button>
+                  
+                  <div className="pt-2">
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={() => appendOption({ value: "" })}
+                      className="h-12 px-6 border-dashed border-2 border-slate-300 text-slate-600 hover:border-blue-500 hover:text-blue-600 bg-white"
+                    >
+                      <Plus className="mr-2 h-5 w-5" /> Add Another Option
+                    </Button>
+                  </div>
                   {form.formState.errors.answer && (
-                     <p className="text-sm font-medium text-destructive mt-2">{form.formState.errors.answer.message}</p>
+                     <p className="text-sm font-medium text-destructive mt-2 bg-red-50 p-3 rounded-lg border border-red-100">{form.formState.errors.answer.message}</p>
                   )}
                 </div>
               ) : (
@@ -428,10 +497,15 @@ export default function QuestionDialog({
                   control={form.control}
                   name="integerAnswer"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Correct Integer Answer</FormLabel>
+                    <FormItem className="space-y-2.5">
+                      <FormLabel className="text-slate-700 font-semibold text-sm block mb-2">Correct Integer Answer</FormLabel>
                       <FormControl>
-                        <Input type="number" step="any" {...field} />
+                        <Input 
+                          type="number" 
+                          step="any" 
+                          className="h-12 px-4 bg-white border-slate-200 shadow-sm focus-visible:ring-blue-500 text-base mt-2 max-w-xs" 
+                          {...field} 
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -440,15 +514,15 @@ export default function QuestionDialog({
               )}
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
               <FormField
                 control={form.control}
                 name="marks"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Positive Marks</FormLabel>
+                  <FormItem className="space-y-2.5">
+                    <FormLabel className="text-slate-700 font-semibold text-sm block mb-2">Positive Marks</FormLabel>
                     <FormControl>
-                      <Input type="number" {...field} />
+                      <Input type="number" className="h-12 px-4 bg-white border-slate-200 shadow-sm text-base" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -458,10 +532,10 @@ export default function QuestionDialog({
                 control={form.control}
                 name="negativeMarks"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Negative Marks</FormLabel>
+                  <FormItem className="space-y-2.5">
+                    <FormLabel className="text-slate-700 font-semibold text-sm block mb-2">Negative Marks</FormLabel>
                     <FormControl>
-                      <Input type="number" {...field} />
+                      <Input type="number" className="h-12 px-4 bg-white border-slate-200 shadow-sm text-base" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -471,11 +545,11 @@ export default function QuestionDialog({
                 control={form.control}
                 name="difficulty"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Difficulty</FormLabel>
+                  <FormItem className="space-y-2.5">
+                    <FormLabel className="text-slate-700 font-semibold text-sm block mb-2">Difficulty</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger>
+                        <SelectTrigger className="h-12 px-4 bg-white border-slate-200 shadow-sm text-base">
                           <SelectValue />
                         </SelectTrigger>
                       </FormControl>
@@ -493,10 +567,10 @@ export default function QuestionDialog({
                 control={form.control}
                 name="examTag"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Exam Tag</FormLabel>
+                  <FormItem className="space-y-2.5">
+                    <FormLabel className="text-slate-700 font-semibold text-sm block mb-2">Exam Tag</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g. JEE 2024" {...field} />
+                      <Input placeholder="e.g. JEE 2024" className="h-12 px-4 bg-white border-slate-200 shadow-sm text-base" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -508,10 +582,14 @@ export default function QuestionDialog({
               control={form.control}
               name="explanation"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Explanation (Solution)</FormLabel>
+                <FormItem className="space-y-2.5">
+                  <FormLabel className="text-slate-700 font-semibold text-sm block mb-2">Explanation (Solution)</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Detailed explanation..." className="min-h-[80px]" {...field} />
+                    <Textarea 
+                      placeholder="Detailed explanation..." 
+                      className="min-h-[120px] px-4 py-3 bg-white border-slate-200 shadow-sm focus-visible:ring-blue-500 text-base resize-y" 
+                      {...field} 
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -522,33 +600,55 @@ export default function QuestionDialog({
               control={form.control}
               name="explanationImage"
               render={({ field: { value, onChange, ...field } }) => (
-                <FormItem>
-                  <FormLabel>Explanation Images (Optional, Multiple)</FormLabel>
+                <FormItem className="space-y-2.5">
+                  <FormLabel className="text-slate-700 font-semibold text-sm block mb-2">Explanation Images (Optional, Multiple)</FormLabel>
                   <FormControl>
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      onChange={(e) => onChange(e.target.files)}
-                      {...field}
-                    />
+                    <div className="relative group mt-2 h-20">
+                      <div className="absolute inset-0 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50 flex flex-col items-center justify-center overflow-hidden transition-colors group-hover:border-slate-300 group-hover:bg-slate-100">
+                        {ePreviewCount > 0 ? (
+                           <div className="flex flex-col items-center">
+                             <ImagePlus className="w-6 h-6 text-blue-500 mb-1" />
+                             <span className="text-sm font-semibold text-slate-700">{ePreviewCount} file(s) selected</span>
+                           </div>
+                        ) : (
+                          <div className="flex flex-col items-center gap-1 text-slate-500">
+                            <ImagePlus className="w-6 h-6" />
+                            <span className="text-sm font-semibold">Upload Images</span>
+                          </div>
+                        )}
+                      </div>
+                      <Input
+                        type={"file" as any}
+                        accept="image/*"
+                        multiple
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                        onChange={(e) => {
+                          onChange(e.target.files);
+                          setEPreviewCount(e.target.files ? e.target.files.length : 0);
+                        }}
+                        {...field}
+                      />
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 border p-4 rounded-md">
-              <div className="md:col-span-5 font-semibold text-sm">Source Info</div>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-6 border border-slate-200 p-6 rounded-2xl bg-white shadow-sm mt-4">
+              <div className="md:col-span-5 border-b border-slate-100 pb-2">
+                <h3 className="text-slate-900 font-bold text-lg">Source Information</h3>
+                <p className="text-sm text-slate-500 mt-1">Track where this question originated from.</p>
+              </div>
               <FormField
                 control={form.control}
                 name="sourceType"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Type</FormLabel>
+                  <FormItem className="space-y-2.5">
+                    <FormLabel className="text-slate-700 font-semibold text-sm">Type</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectTrigger className="h-11 bg-slate-50 border-slate-200 shadow-none"><SelectValue /></SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="pyq">PYQ</SelectItem>
@@ -564,9 +664,9 @@ export default function QuestionDialog({
                 control={form.control}
                 name="sourceExam"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Exam</FormLabel>
-                    <FormControl><Input placeholder="JEE Main" {...field} /></FormControl>
+                  <FormItem className="space-y-2.5">
+                    <FormLabel className="text-slate-700 font-semibold text-sm">Exam</FormLabel>
+                    <FormControl><Input placeholder="JEE Main" className="h-11 bg-slate-50 border-slate-200 shadow-none" {...field} /></FormControl>
                   </FormItem>
                 )}
               />
@@ -574,9 +674,9 @@ export default function QuestionDialog({
                 control={form.control}
                 name="sourceYear"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Year</FormLabel>
-                    <FormControl><Input type="number" {...field} /></FormControl>
+                  <FormItem className="space-y-2.5">
+                    <FormLabel className="text-slate-700 font-semibold text-sm">Year</FormLabel>
+                    <FormControl><Input type="number" className="h-11 bg-slate-50 border-slate-200 shadow-none" {...field} /></FormControl>
                   </FormItem>
                 )}
               />
@@ -584,9 +684,9 @@ export default function QuestionDialog({
                 control={form.control}
                 name="sourceShift"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Shift</FormLabel>
-                    <FormControl><Input type="number" {...field} /></FormControl>
+                  <FormItem className="space-y-2.5">
+                    <FormLabel className="text-slate-700 font-semibold text-sm">Shift</FormLabel>
+                    <FormControl><Input type="number" className="h-11 bg-slate-50 border-slate-200 shadow-none" {...field} /></FormControl>
                   </FormItem>
                 )}
               />
@@ -594,9 +694,9 @@ export default function QuestionDialog({
                 control={form.control}
                 name="sourceInstitute"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Institute</FormLabel>
-                    <FormControl><Input placeholder="NTA" {...field} /></FormControl>
+                  <FormItem className="space-y-2.5">
+                    <FormLabel className="text-slate-700 font-semibold text-sm">Institute</FormLabel>
+                    <FormControl><Input placeholder="NTA" className="h-11 bg-slate-50 border-slate-200 shadow-none" {...field} /></FormControl>
                   </FormItem>
                 )}
               />
@@ -606,20 +706,38 @@ export default function QuestionDialog({
               control={form.control}
               name="isActive"
               render={({ field }) => (
-                <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                <FormItem className="flex flex-row items-center justify-between p-6 rounded-2xl border border-slate-200 bg-slate-50/50 shadow-sm mt-4">
+                  <div className="space-y-1.5">
+                    <FormLabel className="text-slate-900 font-semibold text-lg">Active Status</FormLabel>
+                    <p className="text-base text-slate-500">
+                      Make this question available for tests and practice.
+                    </p>
+                  </div>
                   <FormControl>
-                    <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      className="data-[state=checked]:bg-blue-600 scale-125"
+                    />
                   </FormControl>
-                  <FormLabel>Active (Visible to students)</FormLabel>
                 </FormItem>
               )}
             />
 
-            <div className="flex justify-end gap-2 pt-4">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <div className="flex justify-end gap-4 pt-6 border-t border-slate-100">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => onOpenChange(false)}
+                className="h-12 px-6 font-semibold border-slate-200 hover:bg-slate-50 text-slate-600 text-base"
+              >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isPending}>
+              <Button 
+                type="submit" 
+                disabled={isPending}
+                className="h-12 px-8 font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-sm text-base"
+              >
                 {isPending ? "Saving..." : "Save Question"}
               </Button>
             </div>

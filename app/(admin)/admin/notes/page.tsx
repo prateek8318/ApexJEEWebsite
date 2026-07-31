@@ -12,12 +12,13 @@ import {
   TableRow 
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Plus, Search, Edit, Trash2, FileText, Lock } from "lucide-react";
+import { Plus, Edit, Trash2, FileText, Lock } from "lucide-react";
 import { Note, Chapter, Subject } from "@/types/admin-api";
 import { toast } from "sonner";
 import NoteDialog, { NoteFormValues } from "@/components/admin/note-dialog";
 import { Badge } from "@/components/ui/badge";
+import { AdminPageHeader } from "@/components/admin/ui/admin-page-header";
+import { AdminTableContainer } from "@/components/admin/ui/admin-table-container";
 
 export default function AdminNotesPage() {
   const [search, setSearch] = useState("");
@@ -28,7 +29,7 @@ export default function AdminNotesPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["admin-notes", search],
-    queryFn: () => notesApi.getAllNotes(search),
+    queryFn: () => notesApi.getAllNotes({ search }),
   });
 
   const notes = data?.data || [];
@@ -101,40 +102,31 @@ export default function AdminNotesPage() {
   };
 
   return (
-    <div className="flex flex-col gap-6 w-full max-w-7xl mx-auto">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Study Materials & Notes</h1>
-          <p className="text-muted-foreground">
-            Manage PDF notes, formula sheets, and solved examples.
-          </p>
-        </div>
-        <Button onClick={handleOpenAdd}>
-          <Plus className="mr-2 h-4 w-4" /> Add Note
-        </Button>
-      </div>
+    <div className="flex flex-col gap-6 w-full px-4 sm:px-6 lg:px-8 py-6">
+      <AdminPageHeader 
+        title="Study Materials & Notes"
+        description="Manage PDF notes, formula sheets, and solved examples."
+        buttonText="Add Note"
+        onAdd={handleOpenAdd}
+        icon={<Plus />}
+        colorTheme="cyan"
+      />
 
-      <div className="flex items-center w-full max-w-sm space-x-2">
-        <Input 
-          placeholder="Search notes..." 
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        <Button size="icon" variant="secondary">
-          <Search className="h-4 w-4" />
-        </Button>
-      </div>
-
-      <div className="rounded-md border bg-card">
+      <AdminTableContainer 
+        searchPlaceholder="Search notes by title..."
+        searchValue={search}
+        onSearchChange={setSearch}
+        colorTheme="cyan"
+      >
         <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Title</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Subject</TableHead>
-              <TableHead>Chapter</TableHead>
-              <TableHead>Access</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+          <TableHeader className="bg-slate-50 border-b border-slate-100">
+            <TableRow className="hover:bg-transparent">
+              <TableHead className="font-semibold text-slate-600">Title</TableHead>
+              <TableHead className="font-semibold text-slate-600">Type</TableHead>
+              <TableHead className="font-semibold text-slate-600">Subject</TableHead>
+              <TableHead className="font-semibold text-slate-600">Chapter</TableHead>
+              <TableHead className="font-semibold text-slate-600">Access</TableHead>
+              <TableHead className="text-right font-semibold text-slate-600">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -152,41 +144,41 @@ export default function AdminNotesPage() {
               </TableRow>
             ) : (
               notes.map((note: Note) => (
-                <TableRow key={note._id}>
-                  <TableCell className="font-medium">
+                <TableRow key={note._id} className="hover:bg-slate-50/50 transition-colors group">
+                  <TableCell className="font-semibold text-slate-800">
                     <div className="flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-blue-500" />
+                      <FileText className="h-4 w-4 text-cyan-600" />
                       <span>{note.title}</span>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline" className="capitalize">
+                    <Badge variant="secondary" className="capitalize bg-slate-100 text-slate-600 border-transparent hover:bg-slate-200">
                       {note.type?.replace('_', ' ')}
                     </Badge>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-slate-600 font-medium">
                     {typeof note.subject === "object" ? (note.subject as Subject).name : note.subject}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-slate-600">
                     {typeof note.chapter === "object" ? (note.chapter as Chapter).title : note.chapter}
                   </TableCell>
                   <TableCell>
                     {note.isPremium ? (
-                      <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300">
+                      <Badge variant="outline" className="bg-amber-100 text-amber-700 hover:bg-amber-200 border-amber-200">
                         <Lock className="w-3 h-3 mr-1" /> Premium
                       </Badge>
                     ) : (
-                      <Badge variant="default" className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
+                      <Badge variant="outline" className="bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border-emerald-200">
                         Free
                       </Badge>
                     )}
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end items-center gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(note)}>
+                    <div className="flex justify-end items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(note)} className="text-slate-500 hover:text-cyan-600 hover:bg-cyan-50">
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10" onClick={() => handleDelete(note._id)}>
+                      <Button variant="ghost" size="icon" className="text-slate-500 hover:text-rose-600 hover:bg-rose-50" onClick={() => handleDelete(note._id)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -196,7 +188,7 @@ export default function AdminNotesPage() {
             )}
           </TableBody>
         </Table>
-      </div>
+      </AdminTableContainer>
 
       <NoteDialog 
         isOpen={dialogOpen}

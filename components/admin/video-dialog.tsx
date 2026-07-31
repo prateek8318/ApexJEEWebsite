@@ -28,13 +28,14 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Chapter, Subject, Topic, Video } from "@/types/admin-api";
 import { useQuery } from "@tanstack/react-query";
 import { subjectsApi } from "@/lib/api/admin/subjects";
 import { chaptersApi } from "@/lib/api/admin/chapters";
 import { topicsApi } from "@/lib/api/admin/topics";
+import { ImageIcon, Youtube } from "lucide-react";
 
 const videoSchema = z.object({
   subject: z.string().min(1, "Subject is required."),
@@ -71,8 +72,9 @@ export default function VideoDialog({
   
   const [selectedSubject, setSelectedSubject] = useState<string>("");
   const [selectedChapter, setSelectedChapter] = useState<string>("");
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
-  const { data: subjectsData } = useQuery({
+  const { data: subjectsData, isLoading: isLoadingSubjects } = useQuery({
     queryKey: ["admin-subjects"],
     queryFn: () => subjectsApi.getAllSubjects(),
     enabled: isOpen,
@@ -95,7 +97,7 @@ export default function VideoDialog({
   const topics: Topic[] = topicsData?.data || [];
 
   const form = useForm<VideoFormValues>({
-    resolver: zodResolver(videoSchema),
+    resolver: zodResolver(videoSchema as any),
     defaultValues: {
       subject: "",
       chapter: "",
@@ -118,6 +120,12 @@ export default function VideoDialog({
       
       setSelectedSubject(subjectId);
       setSelectedChapter(chapterId);
+      
+      setPreviewUrl(
+        editingVideo.thumbnailUrl 
+          ? (typeof editingVideo.thumbnailUrl === 'string' ? editingVideo.thumbnailUrl : (editingVideo.thumbnailUrl as any).url)
+          : null
+      );
 
       form.reset({
         subject: subjectId,
@@ -135,6 +143,7 @@ export default function VideoDialog({
     } else {
       setSelectedSubject("");
       setSelectedChapter("");
+      setPreviewUrl(null);
       form.reset({
         subject: "",
         chapter: "",
@@ -149,6 +158,12 @@ export default function VideoDialog({
         isActive: true,
       });
     }
+    
+    return () => {
+      if (previewUrl && previewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
   }, [editingVideo, form, isOpen]);
 
   const handleFormSubmit = (values: VideoFormValues) => {
@@ -158,26 +173,30 @@ export default function VideoDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{editingVideo ? "Edit Video" : "Add Video"}</DialogTitle>
-          <DialogDescription>
-            {editingVideo
-              ? "Make changes to the video lecture details here."
-              : "Fill in the details to add a new video lecture."}
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="sm:max-w-[800px] p-0 max-h-[90vh] overflow-y-auto bg-white">
+        <div className="px-10 pt-10 pb-6 border-b border-slate-100">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold tracking-tight text-slate-900">
+              {editingVideo ? "Edit Video Lecture" : "Add Video Lecture"}
+            </DialogTitle>
+            <DialogDescription className="text-slate-500 mt-2 text-base">
+              {editingVideo
+                ? "Make changes to the video details here."
+                : "Fill in the details below to add a new video lecture to a topic."}
+            </DialogDescription>
+          </DialogHeader>
+        </div>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(handleFormSubmit)} className="px-10 py-8 space-y-8">
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               <FormField
                 control={form.control}
                 name="subject"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Subject <span className="text-destructive">*</span></FormLabel>
+                  <FormItem className="space-y-2.5">
+                    <FormLabel className="text-slate-700 font-semibold text-sm block mb-2">Subject <span className="text-destructive">*</span></FormLabel>
                     <Select 
                       onValueChange={(val) => {
                         field.onChange(val);
@@ -187,9 +206,12 @@ export default function VideoDialog({
                         form.setValue("topic", "");
                       }} 
                       value={field.value} 
+                      disabled={isLoadingSubjects}
                     >
                       <FormControl>
-                        <SelectTrigger><SelectValue placeholder="Select subject" /></SelectTrigger>
+                        <SelectTrigger className="h-12 px-4 bg-white border-slate-200 shadow-sm focus:ring-blue-500 text-base mt-2">
+                          <SelectValue placeholder="Select subject" />
+                        </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         {subjects.map((s) => (
@@ -206,8 +228,8 @@ export default function VideoDialog({
                 control={form.control}
                 name="chapter"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Chapter <span className="text-destructive">*</span></FormLabel>
+                  <FormItem className="space-y-2.5">
+                    <FormLabel className="text-slate-700 font-semibold text-sm block mb-2">Chapter <span className="text-destructive">*</span></FormLabel>
                     <Select 
                       onValueChange={(val) => {
                         field.onChange(val);
@@ -215,10 +237,12 @@ export default function VideoDialog({
                         form.setValue("topic", "");
                       }} 
                       value={field.value} 
-                      disabled={!selectedSubject}
+                      disabled={isLoadingChapters || !selectedSubject}
                     >
                       <FormControl>
-                        <SelectTrigger><SelectValue placeholder={selectedSubject ? "Select chapter" : "Wait..."} /></SelectTrigger>
+                        <SelectTrigger className="h-12 px-4 bg-white border-slate-200 shadow-sm focus:ring-blue-500 text-base mt-2">
+                          <SelectValue placeholder={selectedSubject ? "Select chapter" : "Wait..."} />
+                        </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         {chapters.map((c) => (
@@ -235,11 +259,13 @@ export default function VideoDialog({
                 control={form.control}
                 name="topic"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Topic (Optional)</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || ""} disabled={!selectedChapter}>
+                  <FormItem className="space-y-2.5">
+                    <FormLabel className="text-slate-700 font-semibold text-sm block mb-2">Topic (Optional)</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || ""} disabled={isLoadingTopics || !selectedChapter}>
                       <FormControl>
-                        <SelectTrigger><SelectValue placeholder="Select topic" /></SelectTrigger>
+                        <SelectTrigger className="h-12 px-4 bg-white border-slate-200 shadow-sm focus:ring-blue-500 text-base mt-2">
+                          <SelectValue placeholder="Select topic" />
+                        </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="none">-- None --</SelectItem>
@@ -258,22 +284,37 @@ export default function VideoDialog({
               control={form.control}
               name="title"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Video Title <span className="text-destructive">*</span></FormLabel>
-                  <FormControl><Input placeholder="e.g. Introduction to Magnetism" {...field} /></FormControl>
+                <FormItem className="space-y-2.5">
+                  <FormLabel className="text-slate-700 font-semibold text-sm block mb-2">Video Title <span className="text-destructive">*</span></FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="e.g. Introduction to Magnetism" 
+                      className="h-12 px-4 bg-white border-slate-200 shadow-sm focus-visible:ring-blue-500 text-base mt-2" 
+                      {...field} 
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <FormField
                 control={form.control}
                 name="youtubeUrl"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>YouTube ID / URL <span className="text-destructive">*</span></FormLabel>
-                    <FormControl><Input placeholder="e.g. dQw4w9WgXcQ" {...field} /></FormControl>
+                  <FormItem className="space-y-2.5">
+                    <FormLabel className="text-slate-700 font-semibold text-sm block mb-2">YouTube URL / Video ID <span className="text-destructive">*</span></FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Youtube className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                        <Input 
+                          placeholder="e.g. dQw4w9WgXcQ" 
+                          className="h-12 pl-12 pr-4 bg-white border-slate-200 shadow-sm focus-visible:ring-blue-500 text-base mt-2" 
+                          {...field} 
+                        />
+                      </div>
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -282,10 +323,38 @@ export default function VideoDialog({
                 control={form.control}
                 name="thumbnailUrl"
                 render={({ field: { value, onChange, ...field } }) => (
-                  <FormItem>
-                    <FormLabel>Thumbnail (Optional)</FormLabel>
+                  <FormItem className="space-y-2.5">
+                    <FormLabel className="text-slate-700 font-semibold text-sm block mb-2">Thumbnail (Optional)</FormLabel>
                     <FormControl>
-                      <Input type="file" accept="image/*" onChange={(e) => onChange(e.target.files)} {...field} />
+                      <div className="relative group mt-2 h-16">
+                        <div className="absolute inset-0 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50 flex items-center justify-center overflow-hidden transition-colors group-hover:border-slate-300 group-hover:bg-slate-100">
+                          {previewUrl ? (
+                            <img src={previewUrl} alt="Thumbnail preview" className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="flex items-center gap-2 text-slate-500">
+                              <ImageIcon className="w-5 h-5" />
+                              <span className="text-sm font-semibold">Upload Image</span>
+                            </div>
+                          )}
+                        </div>
+                        <Input
+                          type={"file" as any}
+                          accept="image/*"
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                          onChange={(e) => {
+                            const files = e.target.files;
+                            onChange(files);
+                            if (files && files.length > 0) {
+                              const newPreviewUrl = URL.createObjectURL(files[0]);
+                              if (previewUrl && previewUrl.startsWith('blob:')) {
+                                URL.revokeObjectURL(previewUrl);
+                              }
+                              setPreviewUrl(newPreviewUrl);
+                            }
+                          }}
+                          {...field}
+                        />
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -297,22 +366,34 @@ export default function VideoDialog({
               control={form.control}
               name="description"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description</FormLabel>
-                  <FormControl><Textarea placeholder="Video description..." className="min-h-[80px]" {...field} /></FormControl>
+                <FormItem className="space-y-2.5">
+                  <FormLabel className="text-slate-700 font-semibold text-sm block mb-2">Description</FormLabel>
+                  <FormControl>
+                    <Textarea 
+                      placeholder="Video description..." 
+                      className="min-h-[100px] px-4 py-3 bg-white border-slate-200 shadow-sm focus-visible:ring-blue-500 text-base mt-2 resize-y" 
+                      {...field} 
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
               <FormField
                 control={form.control}
                 name="durationMinutes"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Duration (Mins)</FormLabel>
-                    <FormControl><Input type="number" {...field} /></FormControl>
+                  <FormItem className="space-y-2.5">
+                    <FormLabel className="text-slate-700 font-semibold text-sm block mb-2">Duration (Mins)</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        className="h-12 px-4 bg-white border-slate-200 shadow-sm focus-visible:ring-blue-500 text-base mt-2" 
+                        {...field} 
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -321,10 +402,14 @@ export default function VideoDialog({
                 control={form.control}
                 name="difficulty"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Difficulty</FormLabel>
+                  <FormItem className="space-y-2.5">
+                    <FormLabel className="text-slate-700 font-semibold text-sm block mb-2">Difficulty</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                      <FormControl>
+                        <SelectTrigger className="h-12 px-4 bg-white border-slate-200 shadow-sm focus:ring-blue-500 text-base mt-2">
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
                       <SelectContent>
                         <SelectItem value="easy">Easy</SelectItem>
                         <SelectItem value="medium">Medium</SelectItem>
@@ -339,9 +424,15 @@ export default function VideoDialog({
                 control={form.control}
                 name="examTag"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Exam Tag</FormLabel>
-                    <FormControl><Input placeholder="e.g. JEE" {...field} /></FormControl>
+                  <FormItem className="space-y-2.5">
+                    <FormLabel className="text-slate-700 font-semibold text-sm block mb-2">Exam Tag</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="e.g. JEE" 
+                        className="h-12 px-4 bg-white border-slate-200 shadow-sm focus-visible:ring-blue-500 text-base mt-2" 
+                        {...field} 
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -350,9 +441,15 @@ export default function VideoDialog({
                 control={form.control}
                 name="order"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Order</FormLabel>
-                    <FormControl><Input type="number" {...field} /></FormControl>
+                  <FormItem className="space-y-2.5">
+                    <FormLabel className="text-slate-700 font-semibold text-sm block mb-2">Order</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        className="h-12 px-4 bg-white border-slate-200 shadow-sm focus-visible:ring-blue-500 text-base mt-2" 
+                        {...field} 
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -363,16 +460,40 @@ export default function VideoDialog({
               control={form.control}
               name="isActive"
               render={({ field }) => (
-                <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                  <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                  <FormLabel>Active (Visible to students)</FormLabel>
+                <FormItem className="flex flex-row items-center justify-between p-6 rounded-2xl border border-slate-200 bg-slate-50/50 shadow-sm mt-4">
+                  <div className="space-y-1.5">
+                    <FormLabel className="text-slate-900 font-semibold text-lg">Active Status</FormLabel>
+                    <p className="text-base text-slate-500">
+                      Make this video visible to students.
+                    </p>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      className="data-[state=checked]:bg-blue-600 scale-125"
+                    />
+                  </FormControl>
                 </FormItem>
               )}
             />
 
-            <div className="flex justify-end gap-2 pt-4">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-              <Button type="submit" disabled={isPending}>{isPending ? "Saving..." : "Save Video"}</Button>
+            <div className="flex justify-end gap-4 pt-6 border-t border-slate-100">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => onOpenChange(false)}
+                className="h-12 px-6 font-semibold border-slate-200 hover:bg-slate-50 text-slate-600 text-base"
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={isPending}
+                className="h-12 px-8 font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-sm text-base"
+              >
+                {isPending ? "Saving..." : "Save Video"}
+              </Button>
             </div>
           </form>
         </Form>

@@ -16,7 +16,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@components/ui/avatar";
 import Link from "next/link";
 // import SidebarSheet from "./sidebar-sheet";
 import useSession from "@stores/session";
-import axios from "@config/axios";
+
 import { AxiosError } from "axios";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "@components/ui/toaster";
@@ -49,7 +49,9 @@ const Header = ({
     setOnLogoutToast(
       toast.loading("Loading...", { description: "Logging out..." }),
     );
-    await axios.post("/api/auth/logout");
+    // Since JWT is stateless and there is no backend logout route,
+    // we just resolve immediately to clear local session.
+    return Promise.resolve();
   }
 
   const { mutate: logout, isPending: isLoggingOut } = useMutation({
@@ -63,11 +65,17 @@ const Header = ({
       router.replace("/auth/login");
     },
     onError: (error: unknown) => {
+      let errorMsg = "Internal server error!";
+      const responseData = (error as AxiosError)?.response?.data;
+      if (typeof responseData === "string" && !responseData.includes("<html")) {
+        errorMsg = responseData;
+      } else if (typeof responseData === "object" && (responseData as any)?.message) {
+        errorMsg = (responseData as any).message;
+      }
+
       toast.error("Error!", {
         id: onLogoutToast,
-        description:
-          ((error as AxiosError)?.response?.data as string) ||
-          "Internal server error!",
+        description: errorMsg,
       });
     },
   });
@@ -119,16 +127,18 @@ const Header = ({
         </div>
 
         <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-muted-foreground hover:text-primary hover:bg-accent"
-          >
-            <Link href="/notifications">
-              {" "}
-              <Bell className="h-5 w-5" />
-            </Link>
-          </Button>
+          {!pathname?.startsWith("/admin") && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-muted-foreground hover:text-primary hover:bg-accent"
+            >
+              <Link href="/notifications">
+                {" "}
+                <Bell className="h-5 w-5" />
+              </Link>
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="icon"
@@ -146,9 +156,9 @@ const Header = ({
                 className="relative h-10 w-10 rounded-full border-2 border-border p-0 hover:border-primary/50"
               >
                 <Avatar className="h-full w-full border-none">
-                  <AvatarImage />
-                  <AvatarFallback className="bg-primary text-accent font-bold">
-                    {mounted ? (session?.name?.charAt(0).toUpperCase() ?? "U") : "U"}
+                  <AvatarImage src={session?.avatarUrl || (session as any)?.profileImage} />
+                  <AvatarFallback className="bg-primary text-accent flex items-center justify-center">
+                    <UserRound className="h-5 w-5" />
                   </AvatarFallback>
                 </Avatar>
               </Button>
@@ -157,7 +167,7 @@ const Header = ({
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1 p-1">
                   <p className="text-sm font-semibold leading-none text-foreground">
-                    {mounted ? session?.name : ""}
+                    {mounted ? (session?.name || "Admin") : "Admin"}
                   </p>
                   <p className="text-xs leading-none text-muted-foreground">
                     {mounted ? session?.email : ""}

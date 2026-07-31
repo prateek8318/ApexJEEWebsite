@@ -12,12 +12,13 @@ import {
   TableRow 
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Plus, Search, Edit, Trash2 } from "lucide-react";
+import { Plus, Edit, Trash2 } from "lucide-react";
 import { Subject } from "@/types/admin-api";
 import { toast } from "sonner";
 import SubjectDialog, { SubjectFormValues } from "@/components/admin/subject-dialog";
 import { Badge } from "@/components/ui/badge";
+import { AdminPageHeader } from "@/components/admin/ui/admin-page-header";
+import { AdminTableContainer } from "@/components/admin/ui/admin-table-container";
 
 export default function AdminSubjectsPage() {
   const [search, setSearch] = useState("");
@@ -96,40 +97,31 @@ export default function AdminSubjectsPage() {
   };
 
   return (
-    <div className="flex flex-col gap-6 w-full max-w-7xl mx-auto">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Subjects</h1>
-          <p className="text-muted-foreground">
-            Manage all the subjects available on the platform.
-          </p>
-        </div>
-        <Button onClick={handleOpenAdd}>
-          <Plus className="mr-2 h-4 w-4" /> Add Subject
-        </Button>
-      </div>
+    <div className="flex flex-col gap-6 w-full px-4 sm:px-6 lg:px-8 py-6">
+      <AdminPageHeader 
+        title="Subjects"
+        description="Manage all the subjects available on the platform. Add, edit, or remove subjects below."
+        buttonText="Add New Subject"
+        onAdd={handleOpenAdd}
+        icon={<Plus />}
+        colorTheme="indigo"
+      />
 
-      <div className="flex items-center w-full max-w-sm space-x-2">
-        <Input 
-          placeholder="Search subjects..." 
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        <Button size="icon" variant="secondary">
-          <Search className="h-4 w-4" />
-        </Button>
-      </div>
-
-      <div className="rounded-md border bg-card">
+      <AdminTableContainer 
+        searchPlaceholder="Search subjects by name or code..."
+        searchValue={search}
+        onSearchChange={setSearch}
+        colorTheme="indigo"
+      >
         <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[100px]">Icon</TableHead>
-              <TableHead>Name</TableHead>
-              <TableHead>Code</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Order</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+          <TableHeader className="bg-slate-50 border-b border-slate-100">
+            <TableRow className="hover:bg-transparent">
+              <TableHead className="w-[100px] font-semibold text-slate-600">Icon</TableHead>
+              <TableHead className="font-semibold text-slate-600">Name</TableHead>
+              <TableHead className="font-semibold text-slate-600">Code</TableHead>
+              <TableHead className="font-semibold text-slate-600">Status</TableHead>
+              <TableHead className="font-semibold text-slate-600">Order</TableHead>
+              <TableHead className="text-right font-semibold text-slate-600">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -147,10 +139,10 @@ export default function AdminSubjectsPage() {
               </TableRow>
             ) : (
               subjects.map((subject: Subject) => (
-                <TableRow key={subject._id}>
+                <TableRow key={subject._id} className="hover:bg-slate-50/50 transition-colors group">
                   <TableCell>
                     {subject.icon ? (
-                      <div className="relative h-10 w-10 overflow-hidden rounded-md bg-muted">
+                      <div className="relative h-10 w-10 overflow-hidden rounded-lg bg-slate-100 border border-slate-200">
                         <img 
                           src={subject.icon.startsWith('http') ? subject.icon : `${process.env.NEXT_PUBLIC_URL || ''}${subject.icon}`} 
                           alt={subject.name}
@@ -158,35 +150,40 @@ export default function AdminSubjectsPage() {
                         />
                       </div>
                     ) : (
-                      <div className="h-10 w-10 bg-muted rounded-md flex items-center justify-center">
-                        <span className="text-xs text-muted-foreground">N/A</span>
+                      <div className="h-10 w-10 bg-slate-100 rounded-lg flex items-center justify-center border border-slate-200">
+                        <span className="text-xs text-slate-400 font-medium">N/A</span>
                       </div>
                     )}
                   </TableCell>
-                  <TableCell className="font-medium">
+                  <TableCell className="font-semibold text-slate-800">
                     <div className="flex items-center gap-2">
                       {subject.name}
                       {subject.colorTheme && (
                         <div 
-                          className="w-3 h-3 rounded-full border border-border" 
+                          className="w-3 h-3 rounded-full border border-slate-200 shadow-sm" 
                           style={{ backgroundColor: subject.colorTheme }}
                         />
                       )}
                     </div>
                   </TableCell>
-                  <TableCell>{subject.code}</TableCell>
+                  <TableCell className="text-slate-600 font-medium">{subject.code}</TableCell>
                   <TableCell>
-                    <Badge variant={subject.isActive ? "default" : "secondary"}>
+                    <Badge 
+                      className={subject.isActive 
+                        ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border-emerald-200" 
+                        : "bg-rose-100 text-rose-700 hover:bg-rose-200 border-rose-200"}
+                      variant="outline"
+                    >
                       {subject.isActive ? "Active" : "Inactive"}
                     </Badge>
                   </TableCell>
-                  <TableCell>{subject.order}</TableCell>
+                  <TableCell className="text-slate-500 font-medium">{subject.order}</TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end items-center gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(subject)}>
+                    <div className="flex justify-end items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(subject)} className="text-slate-500 hover:text-indigo-600 hover:bg-indigo-50">
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10" onClick={() => handleDelete(subject._id)}>
+                      <Button variant="ghost" size="icon" className="text-slate-500 hover:text-rose-600 hover:bg-rose-50" onClick={() => handleDelete(subject._id)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -196,7 +193,7 @@ export default function AdminSubjectsPage() {
             )}
           </TableBody>
         </Table>
-      </div>
+      </AdminTableContainer>
 
       <SubjectDialog 
         isOpen={dialogOpen}

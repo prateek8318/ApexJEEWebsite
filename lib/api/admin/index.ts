@@ -6,3 +6,6 @@ export * from './questions';
 export * from './videos';
 export * from './notes';
 export { adminClient } from './client';
+export { plansApi } from './plans';
+export { userApi } from './users';
+export { approvalApi } from './approvals';

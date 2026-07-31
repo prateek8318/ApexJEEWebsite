@@ -11,13 +11,12 @@ export const proxy = async (request: NextRequest) => {
     font-src 'self' https://fonts.gstatic.com;
     form-action 'self';
     frame-ancestors 'self';
-    frame-src 'self';
-    img-src 'self' blob: data:;
+    frame-src 'self' https://www.youtube.com https://youtube.com https://player.vimeo.com;
+    img-src 'self' blob: data: https://astrofirst.b-cdn.net https://ui-avatars.com;
     object-src 'none';
     script-src-elem 'self' ${process.env.NODE_ENV === "development" ? "'unsafe-inline' 'unsafe-eval'" : `'nonce-${nonce}' 'strict-dynamic'`};
     script-src 'self' ${process.env.NODE_ENV === "development" ? "'unsafe-inline' 'unsafe-eval'" : `'nonce-${nonce}' 'strict-dynamic'`};
     style-src 'self' 'unsafe-inline';
-    upgrade-insecure-requests;
 `;
 
     const contentSecurityPolicyHeaderValue = cspHeader

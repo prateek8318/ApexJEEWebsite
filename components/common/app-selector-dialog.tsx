@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Building2, ChevronRight, Plus, Pencil, Trash2, UserCircle } from "lucide-react";
+import { ChevronRight, Plus, Pencil, Trash2, UserCircle } from "lucide-react";
 import { cn } from "@lib/utils";
 import { toast } from "@components/ui/toaster";
 import {

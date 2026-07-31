@@ -68,6 +68,8 @@ export const RegisterSchema = z
       .refine((value) => value === true, {
         message: "You must accept Terms & Conditions",
       }),
+      
+    profileImage: z.any().optional(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     path: ["confirmPassword"],

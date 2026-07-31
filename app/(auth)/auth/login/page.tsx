@@ -70,9 +70,9 @@ const LoginPage = () => {
             >
               {/* Tabs */}
               <Tabs defaultValue="student" className="w-full">
-                <TabsList className="grid w-full grid-cols-3 mb-8">
+                <TabsList className="grid w-full grid-cols-2 mb-8">
                   <TabsTrigger value="student">Student</TabsTrigger>
-                  <TabsTrigger value="tutor">Tutor</TabsTrigger>
+                  {/* <TabsTrigger value="tutor">Tutor</TabsTrigger> */}
                   <TabsTrigger value="admin">Admin</TabsTrigger>
                 </TabsList>
 
@@ -91,6 +91,7 @@ const LoginPage = () => {
                 </TabsContent>
 
                 {/* Tutor Tab */}
+                {/* 
                 <TabsContent value="tutor" className="space-y-6">
                   <div className="mb-6">
                     <h2 className="text-[24px] font-semibold tracking-tight text-gray-900">
@@ -102,13 +103,7 @@ const LoginPage = () => {
                   </div>
                   <LoginForm userType="tutor" />
                 </TabsContent>
-
-
-
-
-
-
-                
+                */}
 
                 {/* Admin Tab */}
                 <TabsContent value="admin" className="space-y-6">

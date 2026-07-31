@@ -4,12 +4,13 @@ import Image from "next/image";
 import { cn } from "@lib/utils";
 import { useState } from "react";
 import { icon } from "@assets";
+import mainLogo from "@/assets/images/logo.png";
 import { Button } from "@components/ui/button";
-import { ChevronLeft, LogOut, Menu } from "lucide-react";
+import { ChevronLeft, LogOut, User } from "lucide-react";
 import { ScrollArea } from "@components/ui/scroll-area";
 import CollapsibleMenuItem from "./collapsible-menu-item";
 import MenuItemComponent from "./menu-item";
-import AppSelectorDialog from "./app-selector-dialog";
+import { Avatar, AvatarFallback, AvatarImage } from "@components/ui/avatar";
 
 import useSession from "@stores/session";
 import { useRouter } from "next/navigation";
@@ -66,7 +67,7 @@ const Sidebar = ({ menuItemsData }: SidebarProps) => {
   return (
     <aside
       className={cn(
-        "border-border bg-[#0F172A] sticky inset-y-0 left-0 z-30 hidden h-screen shrink-0 -translate-x-full border-r py-5 transition-[width] duration-300 ease-in-out lg:flex lg:translate-x-0 lg:flex-col lg:items-center lg:justify-start",
+        "bg-[#0F172A] sticky inset-y-0 left-0 z-30 hidden h-screen shrink-0 -translate-x-full py-5 transition-[width] duration-300 ease-in-out lg:flex lg:translate-x-0 lg:flex-col lg:items-center lg:justify-start shadow-sm",
         sidebarIsOpen ? "w-72 px-5" : "w-20 px-2",
       )}
     >
@@ -92,17 +93,14 @@ const Sidebar = ({ menuItemsData }: SidebarProps) => {
       >
         <Link href="/">
           {sidebarIsOpen ? (
-            <div className="flex items-center gap-2 mt-6 mr-14">
-              <Image
-                alt="Logo"
-                className="transition-transform duration-400"
-                height={40}
-                priority
-                src={icon}
+            <div className="flex items-center mt-6 mr-14">
+              <Image 
+                alt="Apex JEE Logo" 
+                height={32} 
+                priority 
+                src={mainLogo} 
+                className="object-contain"
               />
-              <span className="text-2xl font-bold text-accent">
-                Apex JEE
-              </span>
             </div>
           ) : (
             <Image alt="Logo" height={40} priority src={icon} width={40} />
@@ -130,23 +128,21 @@ const Sidebar = ({ menuItemsData }: SidebarProps) => {
       </ScrollArea>
       <div
         className={cn(
-          "transition-all duration-300 ease-in-out mt-auto bg-white rounded-xl flex items-center justify-between py-2 px-3 w-full border border-border shadow-sm",
+          "transition-all duration-300 ease-in-out mt-auto bg-[#1E293B] rounded-xl flex items-center justify-between py-2 px-3 w-full border border-slate-700 shadow-sm",
           !sidebarIsOpen && "p-2 justify-center",
         )}
       >
         {sidebarIsOpen && (
           <div className="flex items-center gap-2 overflow-hidden">
-            <div
-              className={cn(
-                "bg-primary text-white font-bold rounded-full flex items-center justify-center shrink-0",
-                sidebarIsOpen ? "size-8 text-xs" : "size-8 text-xs",
-              )}
-            >
-              {mounted ? (session?.name?.charAt(0).toUpperCase() || "U") : "U"}
-            </div>
+            <Avatar className="h-8 w-8 border-none shrink-0">
+              <AvatarImage src={session?.avatarUrl || (session as any)?.profileImage} />
+              <AvatarFallback className="bg-blue-600 text-white flex items-center justify-center">
+                <User size={16} />
+              </AvatarFallback>
+            </Avatar>
             <span
               className={cn(
-                "text-primary font-bold text-base transition-all duration-300 ease-in-out truncate",
+                "text-slate-200 font-bold text-sm transition-all duration-300 ease-in-out truncate",
                 sidebarIsOpen ? "opacity-100 translate-x-0" : "opacity-0 invisible -translate-x-10 w-0",
               )}
             >
@@ -161,7 +157,7 @@ const Sidebar = ({ menuItemsData }: SidebarProps) => {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
-                    className="hover:bg-accent/50 text-muted-foreground p-2 h-9 w-9 rounded-xl"
+                    className="hover:bg-slate-800 hover:text-red-400 text-red-400 p-2 h-9 w-9 rounded-xl transition-colors"
                     disabled={isPending}
                     onClick={() => mutate()}
                     variant="ghost"
@@ -175,7 +171,6 @@ const Sidebar = ({ menuItemsData }: SidebarProps) => {
               </Tooltip>
             </TooltipProvider>
           )}
-
         </div>
       </div>
     </aside>

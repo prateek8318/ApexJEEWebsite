@@ -12,14 +12,14 @@ import {
   TableRow 
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Plus, Search, Edit, Trash2 } from "lucide-react";
-import { Question, Topic, Chapter, Subject } from "@/types/admin-api";
+import { Plus, Edit, Trash2, FileUp } from "lucide-react";
+import { Question, Chapter, Subject } from "@/types/admin-api";
 import { toast } from "sonner";
 import QuestionDialog, { QuestionFormValues } from "@/components/admin/question-dialog";
 import BulkUploadDialog from "@/components/admin/bulk-upload-dialog";
 import { Badge } from "@/components/ui/badge";
-import { FileUp } from "lucide-react";
+import { AdminPageHeader } from "@/components/admin/ui/admin-page-header";
+import { AdminTableContainer } from "@/components/admin/ui/admin-table-container";
 
 export default function AdminQuestionsPage() {
   const [search, setSearch] = useState("");
@@ -31,7 +31,7 @@ export default function AdminQuestionsPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["admin-questions", search],
-    queryFn: () => questionsApi.getAllQuestions(search),
+    queryFn: () => questionsApi.getAllQuestions({ search }),
   });
 
   const questions = data?.data || [];
@@ -131,46 +131,39 @@ export default function AdminQuestionsPage() {
     bulkUploadMutation.mutate(formData);
   };
 
+  const extraButtons = (
+    <Button variant="outline" onClick={() => setBulkUploadOpen(true)} className="border-slate-300 text-slate-700 hover:bg-slate-100 h-10 px-4">
+      <FileUp className="mr-2 h-4 w-4" /> Bulk Upload
+    </Button>
+  );
+
   return (
-    <div className="flex flex-col gap-6 w-full max-w-7xl mx-auto">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Questions Bank</h1>
-          <p className="text-muted-foreground">
-            Manage practice questions and mock test materials.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setBulkUploadOpen(true)}>
-            <FileUp className="mr-2 h-4 w-4" /> Bulk Upload
-          </Button>
-          <Button onClick={handleOpenAdd}>
-            <Plus className="mr-2 h-4 w-4" /> Add Question
-          </Button>
-        </div>
-      </div>
+    <div className="flex flex-col gap-6 w-full px-4 sm:px-6 lg:px-8 py-6">
+      <AdminPageHeader 
+        title="Questions Bank"
+        description="Manage practice questions and mock test materials."
+        buttonText="Add Question"
+        onAdd={handleOpenAdd}
+        icon={<Plus />}
+        colorTheme="violet"
+        extraButtons={extraButtons}
+      />
 
-      <div className="flex items-center w-full max-w-sm space-x-2">
-        <Input 
-          placeholder="Search questions..." 
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        <Button size="icon" variant="secondary">
-          <Search className="h-4 w-4" />
-        </Button>
-      </div>
-
-      <div className="rounded-md border bg-card">
+      <AdminTableContainer 
+        searchPlaceholder="Search questions by text..."
+        searchValue={search}
+        onSearchChange={setSearch}
+        colorTheme="violet"
+      >
         <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[300px]">Question Snippet</TableHead>
-              <TableHead>Subject</TableHead>
-              <TableHead>Chapter</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Difficulty</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+          <TableHeader className="bg-slate-50 border-b border-slate-100">
+            <TableRow className="hover:bg-transparent">
+              <TableHead className="w-[350px] font-semibold text-slate-600">Question Snippet</TableHead>
+              <TableHead className="font-semibold text-slate-600">Subject</TableHead>
+              <TableHead className="font-semibold text-slate-600">Chapter</TableHead>
+              <TableHead className="font-semibold text-slate-600">Type</TableHead>
+              <TableHead className="font-semibold text-slate-600">Difficulty</TableHead>
+              <TableHead className="text-right font-semibold text-slate-600">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -188,34 +181,43 @@ export default function AdminQuestionsPage() {
               </TableRow>
             ) : (
               questions.map((question: Question) => (
-                <TableRow key={question._id}>
-                  <TableCell className="font-medium">
-                    <div className="truncate max-w-[280px]" title={question.questionText}>
+                <TableRow key={question._id} className="hover:bg-slate-50/50 transition-colors group">
+                  <TableCell className="font-medium text-slate-800">
+                    <div className="truncate max-w-[320px]" title={question.questionText}>
                       {question.questionText}
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-slate-600 font-medium">
                     {typeof question.subject === "object" ? (question.subject as Subject).name : question.subject}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-slate-600">
                     {typeof question.chapter === "object" ? (question.chapter as Chapter).title : question.chapter}
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline" className="uppercase text-xs">
+                    <Badge variant="secondary" className="uppercase text-[10px] tracking-wider bg-slate-100 text-slate-600 border-transparent hover:bg-slate-200">
                       {question.questionType}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={question.difficulty === "hard" ? "destructive" : question.difficulty === "medium" ? "default" : "secondary"}>
+                    <Badge 
+                      className={
+                        question.difficulty === "hard" 
+                          ? "bg-rose-100 text-rose-700 hover:bg-rose-200 border-rose-200" 
+                          : question.difficulty === "medium" 
+                            ? "bg-amber-100 text-amber-700 hover:bg-amber-200 border-amber-200" 
+                            : "bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border-emerald-200"
+                      }
+                      variant="outline"
+                    >
                       {question.difficulty}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end items-center gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(question)}>
+                    <div className="flex justify-end items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(question)} className="text-slate-500 hover:text-violet-600 hover:bg-violet-50">
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10" onClick={() => handleDelete(question._id)}>
+                      <Button variant="ghost" size="icon" className="text-slate-500 hover:text-rose-600 hover:bg-rose-50" onClick={() => handleDelete(question._id)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -225,7 +227,7 @@ export default function AdminQuestionsPage() {
             )}
           </TableBody>
         </Table>
-      </div>
+      </AdminTableContainer>
 
       <QuestionDialog 
         isOpen={dialogOpen}

@@ -10,24 +10,19 @@ import {
 
 export default function MockTestsClient() {
   const [step, setStep] = useState<"dashboard" | "instructions" | "exam" | "results">("dashboard");
+  const [selectedTestId, setSelectedTestId] = useState("");
   const [selectedTestTitle, setSelectedTestTitle] = useState("");
-  const [testResults, setTestResults] = useState<{
-    score: number;
-    totalQuestions: number;
-    answered: number;
-    skipped: number;
-    marked: number;
-    notAttempted: number;
-    correct: number;
-    wrong: number;
-  } | null>(null);
+  const [activeAttemptId, setActiveAttemptId] = useState("");
+  const [testResults, setTestResults] = useState<any>(null);
 
-  const handleStartTest = (_testId: string, testTitle: string) => {
+  const handleStartTest = (testId: string, testTitle: string) => {
+    setSelectedTestId(testId);
     setSelectedTestTitle(testTitle);
     setStep("instructions");
   };
 
-  const handleBeginTest = () => {
+  const handleBeginTest = (attemptId: string) => {
+    setActiveAttemptId(attemptId);
     setStep("exam");
   };
 
@@ -36,16 +31,13 @@ export default function MockTestsClient() {
     setStep("results");
   };
 
-  const handleBackToDashboard = () => {
-    setStep("dashboard");
-    setSelectedTestTitle("");
-    setTestResults(null);
-  };
+
 
   switch (step) {
     case "instructions":
       return (
         <InstructionsStep
+          testId={selectedTestId}
           testTitle={selectedTestTitle}
           onBack={() => setStep("dashboard")}
           onBeginTest={handleBeginTest}
@@ -54,6 +46,8 @@ export default function MockTestsClient() {
     case "exam":
       return (
         <ExamStep
+          testId={selectedTestId}
+          attemptId={activeAttemptId}
           testTitle={selectedTestTitle}
           onFinishTest={handleFinishTest}
         />
@@ -63,7 +57,7 @@ export default function MockTestsClient() {
         <ResultsStep
           testTitle={selectedTestTitle}
           results={testResults}
-          onBackToDashboard={handleBackToDashboard}
+          onBackToDashboard={() => setStep("dashboard")}
         />
       ) : (
         <DashboardStep onStartTest={handleStartTest} />

@@ -31,12 +31,14 @@ import {
   PersonStanding,
   PlayCircle,
   Settings,
+  ShieldCheck,
   ShieldPlus,
   ShoppingBag,
   Target,
   TrendingUp,
   UsersRound,
   Video,
+  Crown
 } from "lucide-react";
 
 type MenuIconProps = {
@@ -60,6 +62,22 @@ const MenuIcon = ({ src }: MenuIconProps) => {
       return <Video />;
     case "/admin/notes":
       return <FileText />;
+    case "/admin/tests":
+      return <ClipboardList />;
+    case "/admin/plans":
+    case "/admin/monetization":
+      return <Crown />;
+    case "/admin/content":
+      return <BookOpen />;
+    case "/admin/study":
+      return <Video />;
+    case "/admin/assessment":
+      return <HelpCircle />;
+    case "/admin/users":
+    case "/admin/users-management":
+      return <UsersRound />;
+    case "/admin/approvals":
+      return <ShieldCheck />;
     case "/self-learning":
       return <BookOpenText />;
     case "/study-materials":

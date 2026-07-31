@@ -1,4 +1,3 @@
-import FeaturesSection from "./components/Featuressection";
 import FounderSection from "./components/Foundersection";
 import TestimonialsSection from "./components/Testimonialssection ";
 import CTAFooter from "./components/Ctafooter";
@@ -9,7 +8,6 @@ export default function Home() {
         <div style={{ fontFamily: "'Inter', sans-serif" }}>
             <NavBar />
             <HeroSection />
-            <FeaturesSection />
             <PlatformFeatures />
             <FounderSection />
             <PricingSection />

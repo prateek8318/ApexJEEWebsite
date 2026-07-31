@@ -12,12 +12,13 @@ import {
   TableRow 
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Plus, Search, Edit, Trash2 } from "lucide-react";
+import { Plus, Edit, Trash2 } from "lucide-react";
 import { Topic, Chapter, Subject } from "@/types/admin-api";
 import { toast } from "sonner";
 import TopicDialog, { TopicFormValues } from "@/components/admin/topic-dialog";
 import { Badge } from "@/components/ui/badge";
+import { AdminPageHeader } from "@/components/admin/ui/admin-page-header";
+import { AdminTableContainer } from "@/components/admin/ui/admin-table-container";
 
 export default function AdminTopicsPage() {
   const [search, setSearch] = useState("");
@@ -28,7 +29,7 @@ export default function AdminTopicsPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["admin-topics", search],
-    queryFn: () => topicsApi.getAllTopics(search),
+    queryFn: () => topicsApi.getAllTopics({ search }),
   });
 
   const topics = data?.data || [];
@@ -86,40 +87,31 @@ export default function AdminTopicsPage() {
   };
 
   return (
-    <div className="flex flex-col gap-6 w-full max-w-7xl mx-auto">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Topics</h1>
-          <p className="text-muted-foreground">
-            Manage all the topics within chapters.
-          </p>
-        </div>
-        <Button onClick={handleOpenAdd}>
-          <Plus className="mr-2 h-4 w-4" /> Add Topic
-        </Button>
-      </div>
+    <div className="flex flex-col gap-6 w-full px-4 sm:px-6 lg:px-8 py-6">
+      <AdminPageHeader 
+        title="Topics"
+        description="Manage all the topics within chapters."
+        buttonText="Add New Topic"
+        onAdd={handleOpenAdd}
+        icon={<Plus />}
+        colorTheme="amber"
+      />
 
-      <div className="flex items-center w-full max-w-sm space-x-2">
-        <Input 
-          placeholder="Search topics..." 
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        <Button size="icon" variant="secondary">
-          <Search className="h-4 w-4" />
-        </Button>
-      </div>
-
-      <div className="rounded-md border bg-card">
+      <AdminTableContainer 
+        searchPlaceholder="Search topics by title..."
+        searchValue={search}
+        onSearchChange={setSearch}
+        colorTheme="amber"
+      >
         <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Topic Title</TableHead>
-              <TableHead>Subject</TableHead>
-              <TableHead>Chapter</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Order</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+          <TableHeader className="bg-slate-50 border-b border-slate-100">
+            <TableRow className="hover:bg-transparent">
+              <TableHead className="font-semibold text-slate-600">Topic Title</TableHead>
+              <TableHead className="font-semibold text-slate-600">Subject</TableHead>
+              <TableHead className="font-semibold text-slate-600">Chapter</TableHead>
+              <TableHead className="font-semibold text-slate-600">Status</TableHead>
+              <TableHead className="font-semibold text-slate-600">Order</TableHead>
+              <TableHead className="text-right font-semibold text-slate-600">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -137,26 +129,31 @@ export default function AdminTopicsPage() {
               </TableRow>
             ) : (
               topics.map((topic: Topic) => (
-                <TableRow key={topic._id}>
-                  <TableCell className="font-medium">{topic.title}</TableCell>
-                  <TableCell>
+                <TableRow key={topic._id} className="hover:bg-slate-50/50 transition-colors group">
+                  <TableCell className="font-semibold text-slate-800">{topic.title}</TableCell>
+                  <TableCell className="text-slate-600 font-medium">
                     {typeof topic.subject === "object" ? (topic.subject as Subject).name : topic.subject}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-slate-600">
                     {typeof topic.chapter === "object" ? `Ch ${(topic.chapter as Chapter).chapterNumber}: ${(topic.chapter as Chapter).title}` : topic.chapter}
                   </TableCell>
                   <TableCell>
-                    <Badge variant={topic.isActive ? "default" : "secondary"}>
+                    <Badge 
+                      className={topic.isActive 
+                        ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border-emerald-200" 
+                        : "bg-rose-100 text-rose-700 hover:bg-rose-200 border-rose-200"}
+                      variant="outline"
+                    >
                       {topic.isActive ? "Active" : "Inactive"}
                     </Badge>
                   </TableCell>
-                  <TableCell>{topic.order}</TableCell>
+                  <TableCell className="text-slate-500 font-medium">{topic.order}</TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end items-center gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(topic)}>
+                    <div className="flex justify-end items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(topic)} className="text-slate-500 hover:text-amber-600 hover:bg-amber-50">
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10" onClick={() => handleDelete(topic._id)}>
+                      <Button variant="ghost" size="icon" className="text-slate-500 hover:text-rose-600 hover:bg-rose-50" onClick={() => handleDelete(topic._id)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -166,7 +163,7 @@ export default function AdminTopicsPage() {
             )}
           </TableBody>
         </Table>
-      </div>
+      </AdminTableContainer>
 
       <TopicDialog 
         isOpen={dialogOpen}

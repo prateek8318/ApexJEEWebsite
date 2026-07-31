@@ -35,4 +35,20 @@ export const authApi = {
     const response = await adminClient.get('/profile');
     return response.data;
   },
+
+  /**
+   * Verify OTP
+   */
+  verifyOtp: async (data: { identifier: string; otp: string }): Promise<ApiResponse> => {
+    const response = await adminClient.post('/verify-otp', data);
+    return response.data;
+  },
+
+  /**
+   * Resend OTP
+   */
+  resendOtp: async (data: { identifier: string }): Promise<ApiResponse> => {
+    const response = await adminClient.post('/resend-otp', data);
+    return response.data;
+  },
 };

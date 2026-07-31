@@ -1,4 +1,6 @@
 import Link from "next/link";
+import Image from "next/image";
+import Logo from "@/assets/images/logo.png";
 
 function NavBar() {
     return (
@@ -22,8 +24,8 @@ function NavBar() {
             >
                 <div className="max-w-[1800px] mx-auto px-8 md:px-16 lg:px-24 h-16 flex items-center justify-between">
                     <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <div style={{ width: "28px", height: "28px", background: "#F5A623", borderRadius: "6px", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "700", fontSize: "14px", color: "#000" }}>A</div>
-                        <span style={{ fontWeight: "700", fontSize: "18px", letterSpacing: "-0.3px", color: "#f5a623ff" }}>Apex<span style={{ color: "#F5A623" }}>JEE</span></span>
+                        <div style={{ width: "28px", height: "28px", background: "#F5A623", borderRadius: "6px", display: "flex", alignItems: "center", justifyItems: "center", justifyContent: "center", fontWeight: "700", fontSize: "14px", color: "#000" }}>A</div>
+                        <Image src={Logo} alt="ApexJEE Logo" width={130} height={35} className="object-contain" />
                     </div>
                     <div className="flex items-center gap-6 md:gap-9">
                         {["About", "Features", "Pricing"].map((link) => (

@@ -120,6 +120,7 @@ export interface AdminProfile {
   profileImage?: string;
   role: string;
   isActive: boolean;
+  createdAt?: string;
 }
 
 export interface ApiResponse<T = any> {
@@ -127,4 +128,101 @@ export interface ApiResponse<T = any> {
   message?: string;
   data?: T;
   results?: number;
+}
+
+export interface Test {
+  _id: string;
+  title: string;
+  examTag?: string;
+  mode?: string;
+  testCategory?: string;
+  instructions?: any;
+  negativeMarking: boolean;
+  durationMins: number;
+  scheduledAt?: string;
+  isLive: boolean;
+  isActive: boolean;
+  questions?: Array<{
+    question: string | Question;
+    subject: string | Subject;
+    chapter: string | Chapter;
+    topic: string | Topic;
+    order: number;
+  }>;
+  totalQuestions?: number;
+  totalMarks?: number;
+  createdBy?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface SubscriptionPlan {
+  _id: string;
+  name: string;
+  code: string;
+  planType: "trial" | "monthly" | "quarterly" | "yearly";
+  price: number;
+  billingCycleDays: number;
+  compareAtPrice?: number | null;
+  savePercent: number;
+  isTrial: boolean;
+  trialDays: number;
+  badge?: string | null;
+  highlight: boolean;
+  features: Array<{
+    label: string;
+    included: boolean;
+    _id?: string;
+  }>;
+  limits: {
+    fullContentAccess: boolean;
+    mockTestsPerCycle: number | null;
+    smartTimetable: "none" | "limited" | "full";
+    performanceAnalytics: "none" | "basic" | "full";
+    doubtResolutionPriority: boolean;
+    tutorProgressAccess: boolean;
+    downloadableReports: boolean;
+  };
+  ctaLabel: string;
+  order: number;
+  isActive: boolean;
+  isDeleted: boolean;
+  createdAt: string;
+  createdAtIST?: string;
+}
+
+
+export interface User {
+  _id: string;
+  name: string;
+  email: string;
+  phone: string;
+  profileImage?: string;
+  examTarget: "jee_main" | "jee_advanced" | "neet";
+  targetYear?: number;
+  examDate?: string;
+  prepStartDate?: string;
+  prepEndDate?: string;
+  currentStreak: number;
+  longestStreak: number;
+  lastActiveAt?: string;
+  status: "online" | "offline";
+  isEmailVerified: boolean;
+  isDeleted: boolean;
+  createdAt: string;
+  createdAtIST?: string;
+}
+export interface Admin {
+  _id: string;
+  name: string;
+  email: string;
+  mobile: string;
+  profileImage?: string;
+  approvalStatus: 'pending' | 'approved' | 'rejected';
+  rejectionReason?: string;
+  referralCode?: string | null;
+  termsAccepted: boolean;
+  isDeleted: boolean;
+  createdAt: string;
+  approvedAt?: string;
 }

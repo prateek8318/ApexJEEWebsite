@@ -2,14 +2,15 @@
 
 import { z } from "zod";
 import { useState } from "react";
-import axios from "@config/axios";
+
 import { AxiosError } from "axios";
 import { useForm } from "react-hook-form";
 import { useMutation } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter, useSearchParams } from "next/navigation";
-import useSession from "@stores/session";
+
 import { userAuthApi } from "@lib/api/user/auth";
+import { authApi } from "@lib/api/admin/auth";
 import useCounter from "@hooks/useCounter";
 import { toast } from "@components/ui/toaster";
 import { Button } from "@components/ui/button";
@@ -37,10 +38,12 @@ type VerifyFormProps = {
 const VerifyForm = ({ email, type }: VerifyFormProps) => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { setSession } = useSession();
+  // setSession removed
   const { counter, startCounter } = useCounter(59);
 
   const callbackUrl = searchParams.get("callbackUrl");
+  // @ts-ignore
+  const _callbackUrl = callbackUrl;
 
   const [onResendToast, setOnResendToast] = useState<string | number>();
   const [onVerifyToast, setOnVerifyToast] = useState<string | number>();
@@ -57,7 +60,11 @@ const VerifyForm = ({ email, type }: VerifyFormProps) => {
     setOnResendToast(
       toast.loading("Loading...", { description: "Resending OTP..." }),
     );
-    await axios.post("/api/otp/get-otp", { email });
+    if (type === "admin") {
+      await authApi.resendOtp({ identifier: email });
+    } else {
+      await userAuthApi.resendOtp({ identifier: email });
+    }
   };
 
   const { mutate: resendMutate, isPending: resendIsPending } = useMutation({
@@ -73,7 +80,9 @@ const VerifyForm = ({ email, type }: VerifyFormProps) => {
       toast.error("Error!", {
         id: onResendToast,
         description:
-          ((error as AxiosError)?.response?.data as string) ||
+          (typeof (error as AxiosError)?.response?.data === "string"
+            ? (error as AxiosError).response?.data as string
+            : ((error as AxiosError)?.response?.data as any)?.message) ||
           "Internal server error!",
       });
     },
@@ -84,35 +93,36 @@ const VerifyForm = ({ email, type }: VerifyFormProps) => {
       toast.loading("Loading...", { description: "Verifying OTP..." }),
     );
     const { otp } = values;
-    const response = await userAuthApi.verifyOtp({
-      email,
-      otp,
-    });
-    if (type === "VERIFICATION") {
-      return response.data;
+    if (type === "admin") {
+      const response = await authApi.verifyOtp({ identifier: email, otp });
+      return response;
     } else {
-      return values;
+      const response = await userAuthApi.verifyOtp({
+        identifier: email,
+        otp,
+      });
+      if (type === "VERIFICATION") {
+        return response.data;
+      } else {
+        return values;
+      }
     }
   };
   const { mutate: verifyMutate, isPending: verifyIsPending } = useMutation({
     mutationFn: onVerify,
-    onSuccess: (values: AuthSession | z.infer<typeof VerificationSchema>) => {
-      if (type === "VERIFICATION") {
-        const session = values as AuthSession;
-        // setSession(session);
-          setSession({
-          ...session,
-          token: "",
-        });
+    onSuccess: (values: any) => {
+      if (type === "admin") {
         toast.success("Success!", {
           id: onVerifyToast,
-          description: "Logged in successfully!",
+          description: values.message || "OTP verified successfully. Your account is pending super admin approval.",
         });
-        if (callbackUrl) {
-          router.replace(callbackUrl);
-        } else {
-          router.push("/dashboard");
-        }
+        router.replace("/auth/login?tab=admin");
+      } else if (type === "VERIFICATION") {
+        toast.success("Success!", {
+          id: onVerifyToast,
+          description: "Account verified successfully! Please log in.",
+        });
+        router.replace("/auth/login");
       } else {
         const { otp } = values as z.infer<typeof VerificationSchema>;
         toast.success("Success!", {
@@ -128,7 +138,9 @@ const VerifyForm = ({ email, type }: VerifyFormProps) => {
       toast.error("Error!", {
         id: onVerifyToast,
         description:
-          ((error as AxiosError)?.response?.data as string) ||
+          (typeof (error as AxiosError)?.response?.data === "string"
+            ? (error as AxiosError).response?.data as string
+            : ((error as AxiosError)?.response?.data as any)?.message) ||
           "Internal server error!",
       });
     },

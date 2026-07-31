@@ -9,7 +9,7 @@ import { Button } from "@components/ui/button";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ForgotPasswordSchema } from "@schemas/forgotPassword";
 import { toast } from "@components/ui/toaster";
-import axios from "@config/axios";
+import { userAuthApi } from "@lib/api/user/auth";
 import { AxiosError } from "axios";
 import {
   Form,
@@ -37,10 +37,9 @@ const recoverPasswordForm = () => {
 
   const onSend = async (values: z.infer<typeof ForgotPasswordSchema>) => {
     setOnSendToast(
-      toast.loading("Loading...", { description: "Sending OTP..." }),
+      toast.loading("Loading...", { description: "Sending OTP..." })
     );
-    const { email } = values;
-    await axios.post("/api/otp/get-otp", { email });
+    await userAuthApi.resendOtp({ identifier: values.email });
   };
 
   const { mutate, isPending } = useMutation({

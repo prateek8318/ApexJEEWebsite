@@ -150,6 +150,7 @@ const nextConfig: NextConfig = {
       },
       { hostname: "minio-api.baseel.com", pathname: "**", protocol: "https" },
       { hostname: "ui-avatars.com", pathname: "**", protocol: "https" },
+      { hostname: "astrofirst.b-cdn.net", pathname: "**", protocol: "https" },
     ],
   },
   logging: {

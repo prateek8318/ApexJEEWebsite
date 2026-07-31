@@ -2,8 +2,10 @@ import { adminClient } from './client';
 import { Video, ApiResponse } from '../../../types/admin-api';
 
 export const videosApi = {
-  createVideo: async (data: Partial<Video>): Promise<ApiResponse<Video>> => {
-    const response = await adminClient.post('/video', data);
+  createVideo: async (formData: FormData): Promise<ApiResponse<Video>> => {
+    const response = await adminClient.post('/video', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
     return response.data;
   },
 
@@ -17,8 +19,10 @@ export const videosApi = {
     return response.data;
   },
 
-  updateVideo: async (id: string, data: Partial<Video>): Promise<ApiResponse<Video>> => {
-    const response = await adminClient.patch(`/video/${id}`, data);
+  updateVideo: async (id: string, formData: FormData): Promise<ApiResponse<Video>> => {
+    const response = await adminClient.patch(`/video/${id}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
     return response.data;
   },
 

@@ -13,11 +13,19 @@ export const adminClient = axios.create({
 // Request interceptor to add token if you are storing it in localStorage or elsewhere
 adminClient.interceptors.request.use(
   (config) => {
-    // Modify config before request is sent
-    // Example: const token = localStorage.getItem('adminToken');
-    // if (token) {
-    //   config.headers.Authorization = `Bearer ${token}`;
-    // }
+    try {
+      if (typeof window !== "undefined") {
+        const storage = localStorage.getItem("AuthSession");
+        if (storage) {
+          const { state } = JSON.parse(storage);
+          if (state?.session?.token) {
+            config.headers.Authorization = `Bearer ${state.session.token}`;
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error reading token from local storage:", error);
+    }
     return config;
   },
   (error) => {

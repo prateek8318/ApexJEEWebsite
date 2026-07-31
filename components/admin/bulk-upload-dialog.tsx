@@ -34,7 +34,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Download } from "lucide-react";
+import { Loader2, Download, FileUp, UploadCloud } from "lucide-react";
 
 const bulkUploadSchema = z.object({
   subject: z.string().min(1, "Subject is required"),
@@ -62,7 +62,7 @@ export default function BulkUploadDialog({
   const [file, setFile] = useState<File | null>(null);
 
   const form = useForm<BulkUploadFormValues>({
-    resolver: zodResolver(bulkUploadSchema),
+    resolver: zodResolver(bulkUploadSchema as any),
     defaultValues: {
       subject: "",
       chapter: "",
@@ -109,15 +109,18 @@ export default function BulkUploadDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle>Bulk Upload Questions</DialogTitle>
-          <DialogDescription>
-            Upload a Word document (.docx) to bulk import questions into a specific topic.
+      <DialogContent className="sm:max-w-[550px] p-0 overflow-hidden">
+        <DialogHeader className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+          <DialogTitle className="text-xl text-slate-800 flex items-center gap-2">
+            <FileUp className="h-5 w-5 text-violet-600" />
+            Bulk Upload Questions
+          </DialogTitle>
+          <DialogDescription className="text-slate-500 pt-1">
+            Upload a Word document (.docx) to bulk import questions into a specific topic. Make sure to follow the template format.
           </DialogDescription>
-          <div className="mt-2">
+          <div className="mt-3">
             <a href="/templates/bulk_upload_questions.docx" download>
-              <Button variant="outline" size="sm" type="button" className="h-8">
+              <Button variant="outline" size="sm" type="button" className="h-8 border-violet-200 text-violet-700 hover:bg-violet-50 hover:text-violet-800">
                 <Download className="mr-2 size-3" /> Download Template
               </Button>
             </a>
@@ -125,7 +128,8 @@ export default function BulkUploadDialog({
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col">
+            <div className="px-6 py-5 space-y-5">
             
             <FormField
               control={form.control}
@@ -224,29 +228,43 @@ export default function BulkUploadDialog({
             />
 
             <FormItem>
-              <FormLabel>Word Document (.docx) *</FormLabel>
+              <FormLabel className="text-slate-700 font-semibold">Word Document (.docx) *</FormLabel>
               <FormControl>
-                <Input
-                  type="file"
-                  accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                  onChange={(e) => setFile(e.target.files?.[0] || null)}
-                  required
-                />
+                <div className="flex items-center justify-center w-full">
+                  <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-slate-200 border-dashed rounded-lg cursor-pointer bg-slate-50 hover:bg-slate-100/50 transition-colors">
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                      <UploadCloud className="w-8 h-8 mb-2 text-slate-400" />
+                      <p className="mb-1 text-sm text-slate-600 font-medium">
+                        {file ? file.name : <><span className="font-semibold text-violet-600">Click to upload</span> or drag and drop</>}
+                      </p>
+                      <p className="text-xs text-slate-500">.docx Word Document only</p>
+                    </div>
+                    <Input
+                      type={"file" as any}
+                      accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                      onChange={(e) => setFile(e.target.files?.[0] || null)}
+                      required
+                      className="hidden"
+                    />
+                  </label>
+                </div>
               </FormControl>
             </FormItem>
+            </div>
 
-            <DialogFooter className="pt-4">
+            <DialogFooter className="px-6 py-4 border-t border-slate-100 bg-slate-50/50">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => handleOpenChange(false)}
                 disabled={isPending}
+                className="w-full sm:w-auto"
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isPending || !file}>
+              <Button type="submit" disabled={isPending || !file} className="w-full sm:w-auto bg-violet-600 hover:bg-violet-700 text-white">
                 {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Upload
+                Upload Questions
               </Button>
             </DialogFooter>
           </form>

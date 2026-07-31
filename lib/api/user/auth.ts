@@ -13,5 +13,13 @@ export const userAuthApi = {
   login: async (data: any): Promise<ApiResponse<any>> => {
     const response = await userClient.post('/login', data);
     return response.data;
+  },
+  resendOtp: async (data: any): Promise<ApiResponse<any>> => {
+    const response = await userClient.post('/sendOtp', data);
+    return response.data;
+  },
+  resetPassword: async (data: any): Promise<ApiResponse<any>> => {
+    const response = await userClient.post('/resetPassword', data);
+    return response.data;
   }
 };

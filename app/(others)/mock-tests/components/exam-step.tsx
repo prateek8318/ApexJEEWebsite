@@ -1,287 +1,127 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { userTestApi } from "@/lib/api/user/test";
+import { userTestAttemptApi } from "@/lib/api/user/test-attempt";
 import { 
   Clock, 
   Flag, 
   ChevronLeft, 
-  ZoomIn
+  ZoomIn,
+  Loader2,
+  AlertCircle
 } from "lucide-react";
 import { Button } from "@components/ui/button";
 import { Badge } from "@components/ui/badge";
 import { ScrollArea } from "@components/ui/scroll-area";
 import SubmitModal from "./submit-modal";
-
-interface Question {
-  id: number;
-  section: "physics" | "mathematics";
-  topic: string;
-  difficulty: "Easy" | "Medium" | "Hard";
-  year: string;
-  text: string;
-  formula?: string;
-  options: string[];
-  correctAnswer: number; 
-}
+import { Question, Subject } from "@/types/user-api";
 
 interface ExamStepProps {
+  testId: string;
+  attemptId: string;
   testTitle: string;
-  onFinishTest: (results: {
-    score: number;
-    totalQuestions: number;
-    answered: number;
-    skipped: number;
-    marked: number;
-    notAttempted: number;
-    correct: number;
-    wrong: number;
-  }) => void;
+  onFinishTest: (results: any) => void;
 }
 
-const QUESTIONS_DATA: Question[] = [
-  // PHYSICS (Questions 1 to 10)
-  {
-    id: 1,
-    section: "physics",
-    topic: "KINEMATICS • PROJECTILE MOTION",
-    difficulty: "Medium",
-    year: "JEE Main 2023",
-    text: "A projectile is thrown with an initial velocity of (î + 2ĵ) m/s. If g = 10 m/s², the equation of its trajectory is:",
-    options: ["y = 2x - 5x²", "y = 2x - 2.5x²", "y = x - 5x²", "y = 2x - 1.25x²"],
-    correctAnswer: 1
-  },
-  {
-    id: 2,
-    section: "physics",
-    topic: "ELECTROSTATICS • ELECTRIC FIELD",
-    difficulty: "Hard",
-    year: "JEE Main 2021",
-    text: "Two point charges q and -3q are placed at a distance d apart. The electromagnetic potential is zero at a point on the line joining them at a distance of:",
-    options: ["d/4 from q", "d/3 from q", "d/2 from -3q", "d/5 from -3q"],
-    correctAnswer: 0
-  },
-  {
-    id: 3,
-    section: "physics",
-    topic: "THERMODYNAMICS • CARNOT CYCLE",
-    difficulty: "Easy",
-    year: "JEE Main 2022",
-    text: "A Carnot engine has efficiency of 50% when its sink temperature is at 27°C. The source temperature is:",
-    options: ["300°C", "327°C", "273°C", "600°C"],
-    correctAnswer: 1
-  },
-  {
-    id: 4,
-    section: "physics",
-    topic: "OPTICS • WAVE OPTICS",
-    difficulty: "Medium",
-    year: "JEE Main 2023",
-    text: "In Young's double slit experiment, the ratio of maximum to minimum intensity in the interference pattern is 25:9. The ratio of amplitudes of the coherent sources is:",
-    options: ["5:3", "4:1", "16:9", "25:3"],
-    correctAnswer: 1
-  },
-  {
-    id: 5,
-    section: "physics",
-    topic: "MAGNETISM • BIOT-SAVART LAW",
-    difficulty: "Medium",
-    year: "JEE Main 2020",
-    text: "A long straight wire carries a current of 35 A. The magnitude of magnetic field B at a point 20 cm from the wire is:",
-    options: ["3.5 × 10⁻⁵ T", "3.5 × 10⁻⁶ T", "1.75 × 10⁻⁵ T", "7.0 × 10⁻⁵ T"],
-    correctAnswer: 0
-  },
-  {
-    id: 6,
-    section: "physics",
-    topic: "ROTATIONAL MOTION • MOMENT OF INERTIA",
-    difficulty: "Hard",
-    year: "JEE Main 2022",
-    text: "The ratio of radius of gyration of a solid sphere of mass M and radius R about its own axis to that of a thin hollow sphere of same mass and radius about its axis is:",
-    options: ["√(2/5) : √(2/3)", "√(3/5) : 1", "√(2/3) : √(2/5)", "√(3/5) : √(2/5)"],
-    correctAnswer: 0
-  },
-  {
-    id: 7,
-    section: "physics",
-    topic: "CURRENT ELECTRICITY • WHEATSTONE BRIDGE",
-    difficulty: "Easy",
-    year: "JEE Main 2024",
-    text: "Four resistances of 10 Ω, 15 Ω, 20 Ω and 30 Ω are connected to form a Wheatstone bridge. The bridge is:",
-    options: ["Balanced", "Unbalanced, current flows from higher to lower node", "Unbalanced, current is zero in galvanometer", "None of these"],
-    correctAnswer: 0
-  },
-  {
-    id: 8,
-    section: "physics",
-    topic: "MODERN PHYSICS • PHOTOELECTRIC EFFECT",
-    difficulty: "Medium",
-    year: "JEE Main 2023",
-    text: "The stopping potential for photoelectrons emitted from a surface when light of wavelength λ is incident is V₀. If the wavelength is doubled, the stopping potential becomes:",
-    options: ["V₀ / 2", "More than V₀ / 2", "Less than V₀ / 2", "V₀"],
-    correctAnswer: 2
-  },
-  {
-    id: 9,
-    section: "physics",
-    topic: "WAVES • DOPPLER EFFECT",
-    difficulty: "Hard",
-    year: "JEE Main 2021",
-    text: "A source of sound emitting frequency 450 Hz approaches a stationary observer with a velocity of 33 m/s. If speed of sound is 330 m/s, the apparent frequency heard is:",
-    options: ["500 Hz", "400 Hz", "495 Hz", "405 Hz"],
-    correctAnswer: 0
-  },
-  {
-    id: 10,
-    section: "physics",
-    topic: "GRAVITATION • ESCAPE VELOCITY",
-    difficulty: "Easy",
-    year: "JEE Main 2022",
-    text: "The escape velocity from the Earth is 11.2 km/s. The escape velocity from a planet having twice the radius and same mean density as Earth is:",
-    options: ["22.4 km/s", "11.2 km/s", "5.6 km/s", "44.8 km/s"],
-    correctAnswer: 0
-  },
-
-  // MATHEMATICS (Questions 11 to 20)
-  {
-    id: 11,
-    section: "mathematics",
-    topic: "ALGEBRA • QUADRATIC EQUATIONS",
-    difficulty: "Easy",
-    year: "JEE Main 2022",
-    text: "If α and β are the roots of the equation x² - 6x + 8 = 0, then the value of α³ + β³ is:",
-    options: ["72", "99", "120", "216"],
-    correctAnswer: 0
-  },
-  {
-    id: 12,
-    section: "mathematics",
-    topic: "CALCULUS • LIMITS",
-    difficulty: "Medium",
-    year: "JEE Main 2023",
-    text: "The limit as x approaches 0 of (sin(5x) / tan(3x)) is:",
-    options: ["5/3", "3/5", "1", "0"],
-    correctAnswer: 0
-  },
-  {
-    id: 13,
-    section: "mathematics",
-    topic: "COORDINATE GEOMETRY • PARABOLA",
-    difficulty: "Hard",
-    year: "JEE Main 2021",
-    text: "The focal chord of the parabola y² = 16x is tangent to the circle (x - 6)² + y² = 4. The slope of this chord is:",
-    options: ["± 1/√3", "± 1", "± √3", "± 2"],
-    correctAnswer: 0
-  },
-  {
-    id: 14,
-    section: "mathematics",
-    topic: "CALCULUS • DEFINITE INTEGRATION",
-    difficulty: "Hard",
-    year: "JEE Main 2022",
-    text: "The integral of sin²(x) dx from 0 to π/2 is equal to:",
-    options: ["π / 2", "π / 4", "π / 8", "1"],
-    correctAnswer: 1
-  },
-  {
-    id: 15,
-    section: "mathematics",
-    topic: "VECTORS • SCALAR TRIPLE PRODUCT",
-    difficulty: "Medium",
-    year: "JEE Main 2024",
-    text: "If vectors â, b̂, and ĉ are coplanar, then the scalar triple product [â b̂ ĉ] is:",
-    options: ["0", "1", "-1", "Depends on angles"],
-    correctAnswer: 0
-  },
-  {
-    id: 16,
-    section: "mathematics",
-    topic: "PROBABILITY • BAYES THEOREM",
-    difficulty: "Medium",
-    year: "JEE Main 2023",
-    text: "A bag contains 3 red and 5 black balls. Another bag contains 6 red and 4 black balls. A ball is drawn at random from one of the bags; it is found to be red. The probability that it was drawn from the second bag is:",
-    options: ["16/31", "15/31", "12/25", "16/25"],
-    correctAnswer: 0
-  },
-  {
-    id: 17,
-    section: "mathematics",
-    topic: "MATRIX • DETERMINANTS",
-    difficulty: "Easy",
-    year: "JEE Main 2022",
-    text: "If A is a 3x3 matrix and |A| = 4, then the value of determinant of 2A is:",
-    options: ["8", "16", "32", "64"],
-    correctAnswer: 2
-  },
-  {
-    id: 18,
-    section: "mathematics",
-    topic: "TRIGONOMETRY • INVERSE TRIG",
-    difficulty: "Medium",
-    year: "JEE Main 2021",
-    text: "The value of sin(cot⁻¹(cos(tan⁻¹(1)))) is equal to:",
-    options: ["√(2/3)", "1/2", "√(3/2)", "1/√3"],
-    correctAnswer: 0
-  },
-  {
-    id: 19,
-    section: "mathematics",
-    topic: "CALCULUS • DIFFERENTIAL EQUATIONS",
-    difficulty: "Hard",
-    year: "JEE Main 2023",
-    text: "The integrating factor of the differential equation (1 + x²) dy/dx + 2xy = cos(x) is:",
-    options: ["e^(x²)", "1 + x²", "log(1 + x²)", "1 / (1 + x²)"],
-    correctAnswer: 1
-  },
-  {
-    id: 20,
-    section: "mathematics",
-    topic: "ALGEBRA • BINOMIAL THEOREM",
-    difficulty: "Medium",
-    year: "JEE Main 2022",
-    text: "Constant term in expansion of (x + 1/x)⁸ is:",
-    options: ["35", "56", "70", "84"],
-    correctAnswer: 2
-  }
-];
-
-export default function ExamStep({ testTitle, onFinishTest }: ExamStepProps) {
-  const [questions] = useState<Question[]>(QUESTIONS_DATA);
-  const [currentIndex, setCurrentIndex] = useState(19); 
-  const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>({
-    1: 0, 2: 1, 3: 0, 4: 2, 5: 1, 6: 0, 7: 0, 8: 1, 9: 0, 10: 2, 
-    11: 1, 12: 0, 13: 2, 14: 1, 15: 0, 17: 2, 19: 1 
-  });
-  
-  const [questionStatuses, setQuestionStatuses] = useState<Record<number, "not_visited" | "skipped" | "answered" | "marked">>({
-    1: "answered", 2: "answered", 3: "answered", 4: "answered", 5: "answered",
-    6: "answered", 7: "answered", 8: "answered", 9: "answered", 10: "answered",
-    11: "answered", 12: "answered", 13: "answered", 14: "answered", 15: "answered",
-    16: "skipped", 17: "answered", 18: "marked", 19: "answered", 20: "not_visited"
+export default function ExamStep({ testId, attemptId, testTitle, onFinishTest }: ExamStepProps) {
+  const { data: testData, isLoading, isError } = useQuery({
+    queryKey: ["test", testId],
+    queryFn: () => userTestApi.getTestById(testId),
+    enabled: !!testId,
   });
 
-  const [timeLeft, setTimeLeft] = useState(10727); 
-  const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
+  const submitMutation = useMutation({
+    mutationFn: (data: { autoSubmitted?: boolean }) => {
+      // format responses
+      const formattedResponses = Object.entries(selectedAnswers).map(([qId, ans]) => {
+        const question = questions.find((q) => q._id === qId);
+        if (!question) return null;
+        
+        const response: any = { question: qId };
+        if (question.questionType === "single" || question.questionType === "multiple") {
+          response.selectedOptions = Array.isArray(ans) ? ans : [ans];
+        } else if (question.questionType === "integer") {
+          response.integerAnswerGiven = ans as number;
+        }
+        return response;
+      }).filter(Boolean);
 
-  useEffect(() => {
-    const currentQId = questions[currentIndex].id;
-    if (questionStatuses[currentQId] === "not_visited") {
-      setQuestionStatuses(prev => ({ ...prev, [currentQId]: "skipped" }));
+      return userTestAttemptApi.submitTestAttempt(attemptId, {
+        responses: formattedResponses,
+        autoSubmitted: data.autoSubmitted || false,
+      });
+    },
+    onSuccess: (res) => {
+      if (res.data) {
+        onFinishTest(res.data);
+      }
     }
-  }, [currentIndex]);
+  });
+
+  const test = testData?.data;
+  
+  // Extract questions and subjects
+  const questions = useMemo(() => {
+    if (!test?.questions) return [];
+    return test.questions.map(q => q.question as Question);
+  }, [test]);
+
+  const subjects = useMemo(() => {
+    const uniqueSubjects = new Map<string, Subject | { _id: string, name: string }>();
+    questions.forEach((q) => {
+      if (typeof q.subject !== 'string' && q.subject) {
+        uniqueSubjects.set(q.subject._id, q.subject as Subject);
+      } else if (typeof q.subject === 'string') {
+        uniqueSubjects.set(q.subject, { _id: q.subject, name: 'Subject' });
+      }
+    });
+    return Array.from(uniqueSubjects.values());
+  }, [questions]);
+
+  const [activeSectionId, setActiveSectionId] = useState<string>("");
+  const [currentIndex, setCurrentIndex] = useState(0); 
+  const [selectedAnswers, setSelectedAnswers] = useState<Record<string, any>>({});
+  const [questionStatuses, setQuestionStatuses] = useState<Record<string, "not_visited" | "skipped" | "answered" | "marked">>({});
+  const [timeLeft, setTimeLeft] = useState(0); 
+  const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
+  const [isTimerInitialized, setIsTimerInitialized] = useState(false);
+
+  // Initialize data
+  useEffect(() => {
+    if (subjects.length > 0 && !activeSectionId) {
+      setActiveSectionId(subjects[0]._id);
+    }
+    if (test && !isTimerInitialized) {
+      setTimeLeft(test.durationMins * 60);
+      setIsTimerInitialized(true);
+    }
+  }, [subjects, test, activeSectionId, isTimerInitialized]);
 
   useEffect(() => {
+    if (questions.length > 0) {
+      const currentQId = questions[currentIndex]?._id;
+      if (currentQId && !questionStatuses[currentQId]) {
+        setQuestionStatuses(prev => ({ ...prev, [currentQId]: "not_visited" }));
+      }
+    }
+  }, [currentIndex, questions]);
+
+  useEffect(() => {
+    if (!isTimerInitialized || timeLeft <= 0) return;
     const timer = setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 1) {
           clearInterval(timer);
-          handleSubmitTest();
+          handleSubmitTest(true);
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [isTimerInitialized]);
 
   const formatTime = (seconds: number) => {
     const hrs = Math.floor(seconds / 3600);
@@ -291,22 +131,55 @@ export default function ExamStep({ testTitle, onFinishTest }: ExamStepProps) {
   };
 
   const activeQuestion = questions[currentIndex];
-  const activeSection = activeQuestion.section;
 
-  const setSection = (section: "physics" | "mathematics") => {
-    const firstQIndex = questions.findIndex(q => q.section === section);
+  const setSection = (sectionId: string) => {
+    setActiveSectionId(sectionId);
+    const firstQIndex = questions.findIndex(q => {
+       const subId = typeof q.subject === 'string' ? q.subject : q.subject._id;
+       return subId === sectionId;
+    });
     if (firstQIndex !== -1) {
       setCurrentIndex(firstQIndex);
     }
   };
 
   const handleSelectOption = (optionIdx: number) => {
-    const qId = activeQuestion.id;
-    setSelectedAnswers(prev => ({ ...prev, [qId]: optionIdx }));
+    if (!activeQuestion) return;
+    const qId = activeQuestion._id;
+    if (activeQuestion.questionType === "multiple") {
+      setSelectedAnswers(prev => {
+        const current = Array.isArray(prev[qId]) ? prev[qId] : [];
+        if (current.includes(optionIdx)) {
+          return { ...prev, [qId]: current.filter((x: number) => x !== optionIdx) };
+        } else {
+          return { ...prev, [qId]: [...current, optionIdx] };
+        }
+      });
+    } else {
+      setSelectedAnswers(prev => ({ ...prev, [qId]: [optionIdx] }));
+    }
+  };
+
+  const handleIntegerInput = (val: string) => {
+    if (!activeQuestion) return;
+    const qId = activeQuestion._id;
+    if (val === "") {
+      setSelectedAnswers(prev => {
+        const copy = { ...prev };
+        delete copy[qId];
+        return copy;
+      });
+    } else {
+      const num = parseFloat(val);
+      if (!isNaN(num)) {
+        setSelectedAnswers(prev => ({ ...prev, [qId]: num }));
+      }
+    }
   };
 
   const handleClear = () => {
-    const qId = activeQuestion.id;
+    if (!activeQuestion) return;
+    const qId = activeQuestion._id;
     setSelectedAnswers(prev => {
       const copy = { ...prev };
       delete copy[qId];
@@ -316,7 +189,8 @@ export default function ExamStep({ testTitle, onFinishTest }: ExamStepProps) {
   };
 
   const handleSkip = () => {
-    const qId = activeQuestion.id;
+    if (!activeQuestion) return;
+    const qId = activeQuestion._id;
     setQuestionStatuses(prev => ({ ...prev, [qId]: "skipped" }));
     if (currentIndex < questions.length - 1) {
       setCurrentIndex(prev => prev + 1);
@@ -324,7 +198,8 @@ export default function ExamStep({ testTitle, onFinishTest }: ExamStepProps) {
   };
 
   const handleMarkAndNext = () => {
-    const qId = activeQuestion.id;
+    if (!activeQuestion) return;
+    const qId = activeQuestion._id;
     setQuestionStatuses(prev => ({ ...prev, [qId]: "marked" }));
     if (currentIndex < questions.length - 1) {
       setCurrentIndex(prev => prev + 1);
@@ -332,8 +207,12 @@ export default function ExamStep({ testTitle, onFinishTest }: ExamStepProps) {
   };
 
   const handleSaveAndNext = () => {
-    const qId = activeQuestion.id;
-    if (selectedAnswers[qId] !== undefined) {
+    if (!activeQuestion) return;
+    const qId = activeQuestion._id;
+    const hasAnswer = selectedAnswers[qId] !== undefined && 
+      (Array.isArray(selectedAnswers[qId]) ? selectedAnswers[qId].length > 0 : true);
+    
+    if (hasAnswer) {
       setQuestionStatuses(prev => ({ ...prev, [qId]: "answered" }));
     } else {
       setQuestionStatuses(prev => ({ ...prev, [qId]: "skipped" }));
@@ -356,8 +235,9 @@ export default function ExamStep({ testTitle, onFinishTest }: ExamStepProps) {
     let notAttempted = 0;
 
     questions.forEach(q => {
-      const status = questionStatuses[q.id] || "not_visited";
-      const hasAnswer = selectedAnswers[q.id] !== undefined;
+      const status = questionStatuses[q._id] || "not_visited";
+      const hasAnswer = selectedAnswers[q._id] !== undefined && 
+        (Array.isArray(selectedAnswers[q._id]) ? selectedAnswers[q._id].length > 0 : true);
 
       if (status === "answered" || (status !== "marked" && hasAnswer)) {
         answered++;
@@ -375,37 +255,27 @@ export default function ExamStep({ testTitle, onFinishTest }: ExamStepProps) {
 
   const currentStats = getStats();
 
-  const handleSubmitTest = () => {
-    let score = 0;
-    let correct = 0;
-    let wrong = 0;
-
-    questions.forEach(q => {
-      const userAns = selectedAnswers[q.id];
-      if (userAns !== undefined) {
-        if (userAns === q.correctAnswer) {
-          correct++;
-          score += 4;
-        } else {
-          wrong++;
-          score -= 1;
-        }
-      }
-    });
-
-    const scaledScore = Math.max(0, score * 3.75); 
-
-    onFinishTest({
-      score: Math.round(scaledScore),
-      totalQuestions: questions.length,
-      answered: currentStats.answered,
-      skipped: currentStats.skipped,
-      marked: currentStats.marked,
-      notAttempted: currentStats.notAttempted,
-      correct,
-      wrong
-    });
+  const handleSubmitTest = (autoSubmitted = false) => {
+    submitMutation.mutate({ autoSubmitted });
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center text-white">
+        <Loader2 className="h-8 w-8 animate-spin text-amber-500 mb-4" />
+        <p>Loading Exam Interface...</p>
+      </div>
+    );
+  }
+
+  if (isError || !test) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center text-red-400">
+        <AlertCircle className="h-8 w-8 mb-4" />
+        <p>Failed to load the test. Please go back and try again.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-slate-900 text-white font-sans overflow-hidden">
@@ -414,7 +284,7 @@ export default function ExamStep({ testTitle, onFinishTest }: ExamStepProps) {
       <header className="flex h-16 shrink-0 items-center justify-between bg-[#0B1220] px-6 border-b border-slate-800">
         <div>
           <h2 className="text-sm font-bold tracking-tight text-white">{testTitle}</h2>
-          <p className="text-[10px] text-slate-400">Physics & Mathematics • 300 Marks • -1 per wrong MCQ answer</p>
+          <p className="text-[10px] text-slate-400">{test.totalQuestions} Questions • {test.totalMarks} Marks</p>
         </div>
         
         {/* Timer Box */}
@@ -429,38 +299,43 @@ export default function ExamStep({ testTitle, onFinishTest }: ExamStepProps) {
             Answered: <span className="font-bold text-emerald-400">{currentStats.answered}</span> / {questions.length}
           </div>
           <Button 
+            disabled={submitMutation.isPending}
             onClick={() => setIsSubmitModalOpen(true)}
             className="bg-amber-500 hover:bg-amber-600 active:scale-95 text-[#0F172A] font-bold text-xs px-5 py-2.5 h-9 rounded-xl shadow-md transition-all cursor-pointer border-none"
           >
-            SUBMIT TEST
+            {submitMutation.isPending ? "SUBMITTING..." : "SUBMIT TEST"}
           </Button>
         </div>
       </header>
 
       {/* Sections Tab Bar */}
       <nav className="flex h-12 shrink-0 items-center bg-[#1E293B] border-b border-slate-800/60 px-6 gap-2">
-        <button 
-          onClick={() => setSection("physics")}
-          className={`flex items-center gap-2 h-full px-5 text-xs font-extrabold uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
-            activeSection === "physics" 
-              ? "border-amber-500 text-amber-500 bg-slate-800/40" 
-              : "border-transparent text-slate-400 hover:text-slate-200"
-          }`}
-        >
-          ⚡ Physics 
-          <Badge variant="outline" className="ml-1 text-[10px] px-1.5 py-0.5 bg-slate-800 border-none text-slate-400 rounded-full font-bold">10/10</Badge>
-        </button>
-        <button 
-          onClick={() => setSection("mathematics")}
-          className={`flex items-center gap-2 h-full px-5 text-xs font-extrabold uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
-            activeSection === "mathematics" 
-              ? "border-amber-500 text-amber-500 bg-slate-800/40" 
-              : "border-transparent text-slate-400 hover:text-slate-200"
-          }`}
-        >
-          ∑ Mathematics 
-          <Badge variant="outline" className="ml-1 text-[10px] px-1.5 py-0.5 bg-amber-500/10 border-none text-amber-400 rounded-full font-bold">7/10</Badge>
-        </button>
+        {subjects.map((subj) => {
+          const isActive = activeSectionId === subj._id;
+          const subjQuestions = questions.filter(q => (typeof q.subject === 'string' ? q.subject : q.subject._id) === subj._id);
+          const answeredInSubj = subjQuestions.filter(q => {
+            const hasAns = selectedAnswers[q._id] !== undefined && 
+              (Array.isArray(selectedAnswers[q._id]) ? selectedAnswers[q._id].length > 0 : true);
+            return hasAns;
+          }).length;
+          
+          return (
+            <button 
+              key={subj._id}
+              onClick={() => setSection(subj._id)}
+              className={`flex items-center gap-2 h-full px-5 text-xs font-extrabold uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
+                isActive 
+                  ? "border-amber-500 text-amber-500 bg-slate-800/40" 
+                  : "border-transparent text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              {subj.name} 
+              <Badge variant="outline" className={`ml-1 text-[10px] px-1.5 py-0.5 border-none rounded-full font-bold ${isActive ? 'bg-amber-500/10 text-amber-400' : 'bg-slate-800 text-slate-400'}`}>
+                {answeredInSubj}/{subjQuestions.length}
+              </Badge>
+            </button>
+          )
+        })}
       </nav>
 
       {/* Exam Body Layout */}
@@ -468,82 +343,103 @@ export default function ExamStep({ testTitle, onFinishTest }: ExamStepProps) {
         
         {/* Left Side: Question Area */}
         <ScrollArea className="flex-1 flex flex-col min-w-0 p-6">
-          <div className="flex-1 flex flex-col justify-between max-w-4xl mx-auto w-full space-y-6">
+          <div className="flex-1 flex flex-col justify-between max-w-4xl mx-auto w-full space-y-6 pb-24">
             
             {/* Question Card */}
-            <div className="bg-slate-900 border border-slate-800/80 rounded-3xl p-6 shadow-xl flex-1 flex flex-col">
-              
-              {/* Question Header Info */}
-              <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-800/60 shrink-0">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-950 border border-indigo-500/30 text-indigo-400 font-black text-base">
-                    Q {activeQuestion.id}
-                  </div>
-                  <div>
-                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{activeQuestion.topic}</div>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Badge variant="outline" className="px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-[10px] font-semibold text-amber-400 uppercase tracking-wider">
-                        {activeQuestion.difficulty}
-                      </Badge>
-                      <Badge variant="outline" className="px-2 py-0.5 rounded bg-indigo-500/10 border border-indigo-500/20 text-[10px] font-semibold text-indigo-400 uppercase tracking-wider">
-                        {activeQuestion.year}
-                      </Badge>
+            {activeQuestion ? (
+              <div className="bg-slate-900 border border-slate-800/80 rounded-3xl p-6 shadow-xl flex-1 flex flex-col">
+                
+                {/* Question Header Info */}
+                <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-800/60 shrink-0">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-950 border border-indigo-500/30 text-indigo-400 font-black text-base">
+                      Q {currentIndex + 1}
+                    </div>
+                    <div>
+                      <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                        {typeof activeQuestion.topic !== 'string' ? (activeQuestion.topic as any)?.title || 'TOPIC' : 'TOPIC'}
+                      </div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge variant="outline" className="px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-[10px] font-semibold text-amber-400 uppercase tracking-wider">
+                          {activeQuestion.difficulty}
+                        </Badge>
+                        <Badge variant="outline" className="px-2 py-0.5 rounded bg-indigo-500/10 border border-indigo-500/20 text-[10px] font-semibold text-indigo-400 uppercase tracking-wider">
+                          {activeQuestion.questionType}
+                        </Badge>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-all cursor-pointer">
-                    <Flag className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-all cursor-pointer">
-                    <ZoomIn className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-
-              {/* Question Statement */}
-              <div className="py-8 text-slate-200 text-lg font-medium leading-relaxed flex-1 select-text">
-                <p className="whitespace-pre-line">{activeQuestion.text}</p>
-                {activeQuestion.id === 20 && (
-                  <div className="mt-4 p-4 bg-slate-950/60 rounded-2xl border border-slate-800/80 font-mono text-center text-2xl text-amber-400 tracking-wider">
-                    (x + 1/x)<sup>8</sup>
+                  <div className="flex items-center gap-2">
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-all cursor-pointer">
+                      <Flag className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-all cursor-pointer">
+                      <ZoomIn className="h-4 w-4" />
+                    </Button>
                   </div>
-                )}
-              </div>
+                </div>
 
-              {/* Options Grid */}
-              <div className="space-y-3 shrink-0">
-                {activeQuestion.options.map((option, idx) => {
-                  const optionLetters = ["A", "B", "C", "D"];
-                  const isSelected = selectedAnswers[activeQuestion.id] === idx;
-                  return (
-                    <button 
-                      key={idx}
-                      onClick={() => handleSelectOption(idx)}
-                      className={`w-full flex items-center gap-4 p-4 rounded-2xl text-left border font-medium transition-all duration-150 cursor-pointer ${
-                        isSelected 
-                          ? "bg-amber-500/10 border-amber-500 text-amber-400" 
-                          : "bg-slate-950/50 hover:bg-slate-850 border-slate-800 text-slate-300"
-                      }`}
-                    >
-                      <div className={`flex h-8 w-8 items-center justify-center rounded-xl font-bold border transition-colors ${
-                        isSelected 
-                          ? "bg-amber-500 border-amber-500 text-slate-950" 
-                          : "bg-slate-900 border-slate-700 text-slate-400"
-                      }`}>
-                        {optionLetters[idx]}
-                      </div>
-                      <span className="text-base">{option}</span>
-                    </button>
-                  );
-                })}
-              </div>
+                {/* Question Statement */}
+                <div className="py-8 text-slate-200 text-lg font-medium leading-relaxed flex-1 select-text">
+                  <p className="whitespace-pre-line">{activeQuestion.questionText}</p>
+                  {activeQuestion.questionImage && (
+                    <img src={activeQuestion.questionImage} alt="Question Diagram" className="mt-6 max-h-64 rounded-xl border border-slate-700 mx-auto" />
+                  )}
+                </div>
 
-            </div>
+                {/* Options Grid / Integer Input */}
+                <div className="space-y-3 shrink-0 mt-4">
+                  {(activeQuestion.questionType === "single" || activeQuestion.questionType === "multiple") && activeQuestion.options ? (
+                    activeQuestion.options.map((option, idx) => {
+                      const optionLetters = ["A", "B", "C", "D", "E", "F"];
+                      const isSelected = activeQuestion.questionType === "multiple" 
+                        ? (Array.isArray(selectedAnswers[activeQuestion._id]) && selectedAnswers[activeQuestion._id].includes(idx))
+                        : (Array.isArray(selectedAnswers[activeQuestion._id]) && selectedAnswers[activeQuestion._id][0] === idx);
+                        
+                      return (
+                        <button 
+                          key={idx}
+                          onClick={() => handleSelectOption(idx)}
+                          className={`w-full flex items-center gap-4 p-4 rounded-2xl text-left border font-medium transition-all duration-150 cursor-pointer ${
+                            isSelected 
+                              ? "bg-amber-500/10 border-amber-500 text-amber-400" 
+                              : "bg-slate-950/50 hover:bg-slate-850 border-slate-800 text-slate-300"
+                          }`}
+                        >
+                          <div className={`flex h-8 w-8 items-center justify-center rounded-xl font-bold border transition-colors ${
+                            isSelected 
+                              ? "bg-amber-500 border-amber-500 text-slate-950" 
+                              : "bg-slate-900 border-slate-700 text-slate-400"
+                          }`}>
+                            {optionLetters[idx]}
+                          </div>
+                          <span className="text-base">{option}</span>
+                        </button>
+                      );
+                    })
+                  ) : activeQuestion.questionType === "integer" ? (
+                    <div className="p-6 bg-slate-950/50 border border-slate-800 rounded-2xl">
+                      <label className="block text-sm font-semibold text-slate-400 mb-3 uppercase tracking-wider">
+                        Enter your numerical answer:
+                      </label>
+                      <input 
+                        type="number"
+                        step="any"
+                        value={selectedAnswers[activeQuestion._id] !== undefined ? selectedAnswers[activeQuestion._id] : ""}
+                        onChange={(e) => handleIntegerInput(e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-700 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-white rounded-xl p-4 text-xl font-mono outline-none transition-all"
+                        placeholder="e.g. 42.5"
+                      />
+                    </div>
+                  ) : null}
+                </div>
+
+              </div>
+            ) : null}
 
             {/* Bottom Actions Controls */}
-            <div className="flex flex-wrap items-center justify-between gap-4 bg-slate-900/60 p-4 border border-slate-800/60 rounded-2xl shrink-0">
+            <div className="flex flex-wrap items-center justify-between gap-4 bg-slate-900/60 p-4 border border-slate-800/60 rounded-2xl shrink-0 mt-6">
               <div className="flex items-center gap-2">
                 <Button 
                   disabled={currentIndex === 0}
@@ -623,74 +519,55 @@ export default function ExamStep({ testTitle, onFinishTest }: ExamStepProps) {
 
             {/* Grid Sections */}
             <div className="space-y-5">
-              {/* Physics Palette */}
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">⚡ Physics</span>
-                  <Badge variant="secondary" className="text-[9px] font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-full border-none">10/10 answered</Badge>
-                </div>
-                <div className="grid grid-cols-5 gap-2">
-                  {questions.slice(0, 10).map((q, idx) => {
-                    const qId = q.id;
-                    const status = questionStatuses[qId] || "not_visited";
-                    const isCurrent = currentIndex === idx;
-                    
-                    let bgClass = "bg-slate-800 border-slate-700 text-slate-400";
-                    if (isCurrent) bgClass = "bg-slate-950 border-amber-500 text-amber-500 ring-1 ring-amber-500";
-                    else if (status === "answered") bgClass = "bg-emerald-500 border-emerald-500 text-white font-bold";
-                    else if (status === "marked") bgClass = "bg-purple-500 border-purple-500 text-white font-bold";
-                    else if (status === "skipped") bgClass = "bg-amber-500 border-amber-500 text-white font-bold";
+              {subjects.map((subj) => {
+                const subjQuestions = questions.filter(q => (typeof q.subject === 'string' ? q.subject : q.subject._id) === subj._id);
+                const answeredInSubj = subjQuestions.filter(q => {
+                  const hasAns = selectedAnswers[q._id] !== undefined && 
+                    (Array.isArray(selectedAnswers[q._id]) ? selectedAnswers[q._id].length > 0 : true);
+                  return hasAns;
+                }).length;
 
-                    return (
-                      <button 
-                        key={qId} 
-                        onClick={() => setCurrentIndex(idx)}
-                        className={`h-9 rounded-xl border flex items-center justify-center text-xs font-semibold relative transition-all duration-150 cursor-pointer ${bgClass}`}
-                      >
-                        {qId}
-                        {status === "marked" && (
-                          <span className="absolute top-1 right-1 h-1.5 w-1.5 rounded-full bg-red-500"></span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+                return (
+                  <div key={subj._id}>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{subj.name}</span>
+                      <Badge variant="secondary" className="text-[9px] font-bold text-slate-400 bg-slate-800 px-2 py-0.5 rounded-full border-none">
+                        {answeredInSubj}/{subjQuestions.length} answered
+                      </Badge>
+                    </div>
+                    <div className="grid grid-cols-5 gap-2">
+                      {subjQuestions.map((q) => {
+                        const actualIdx = questions.findIndex(globalQ => globalQ._id === q._id);
+                        const qId = q._id;
+                        const status = questionStatuses[qId] || "not_visited";
+                        const isCurrent = currentIndex === actualIdx;
+                        
+                        let bgClass = "bg-slate-800 border-slate-700 text-slate-400";
+                        if (isCurrent) bgClass = "bg-slate-950 border-amber-500 text-amber-500 ring-1 ring-amber-500";
+                        else if (status === "answered") bgClass = "bg-emerald-500 border-emerald-500 text-white font-bold";
+                        else if (status === "marked") bgClass = "bg-purple-500 border-purple-500 text-white font-bold";
+                        else if (status === "skipped") bgClass = "bg-amber-500 border-amber-500 text-white font-bold";
 
-              {/* Mathematics Palette */}
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">∑ Mathematics</span>
-                  <Badge variant="secondary" className="text-[9px] font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border-none">7/10 answered</Badge>
-                </div>
-                <div className="grid grid-cols-5 gap-2">
-                  {questions.slice(10, 20).map((q, idx) => {
-                    const actualIdx = idx + 10;
-                    const qId = q.id;
-                    const status = questionStatuses[qId] || "not_visited";
-                    const isCurrent = currentIndex === actualIdx;
-                    
-                    let bgClass = "bg-slate-800 border-slate-700 text-slate-400";
-                    if (isCurrent) bgClass = "bg-slate-950 border-indigo-400 text-indigo-400 ring-1 ring-indigo-400";
-                    else if (status === "answered") bgClass = "bg-emerald-500 border-emerald-500 text-white font-bold";
-                    else if (status === "marked") bgClass = "bg-purple-500 border-purple-500 text-white font-bold";
-                    else if (status === "skipped") bgClass = "bg-amber-500 border-amber-500 text-white font-bold";
-
-                    return (
-                      <button 
-                        key={qId} 
-                        onClick={() => setCurrentIndex(actualIdx)}
-                        className={`h-9 rounded-xl border flex items-center justify-center text-xs font-semibold relative transition-all duration-150 cursor-pointer ${bgClass}`}
-                      >
-                        {qId}
-                        {status === "marked" && (
-                          <span className="absolute top-1 right-1 h-1.5 w-1.5 rounded-full bg-red-500"></span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+                        return (
+                          <button 
+                            key={qId} 
+                            onClick={() => {
+                              setCurrentIndex(actualIdx);
+                              setActiveSectionId(subj._id);
+                            }}
+                            className={`h-9 rounded-xl border flex items-center justify-center text-xs font-semibold relative transition-all duration-150 cursor-pointer ${bgClass}`}
+                          >
+                            {actualIdx + 1}
+                            {status === "marked" && (
+                              <span className="absolute top-1 right-1 h-1.5 w-1.5 rounded-full bg-red-500"></span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -723,7 +600,7 @@ export default function ExamStep({ testTitle, onFinishTest }: ExamStepProps) {
         <SubmitModal 
           stats={currentStats}
           onClose={() => setIsSubmitModalOpen(false)}
-          onSubmit={handleSubmitTest}
+          onSubmit={() => handleSubmitTest()}
         />
       )}
 

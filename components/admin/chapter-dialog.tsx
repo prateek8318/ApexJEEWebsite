@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { Chapter, Subject } from "@/types/admin-api";
 import { useQuery } from "@tanstack/react-query";
 import { subjectsApi } from "@/lib/api/admin/subjects";
@@ -75,7 +75,7 @@ export default function ChapterDialog({
   const subjects: Subject[] = subjectsData?.data || [];
 
   const form = useForm<ChapterFormValues>({
-    resolver: zodResolver(chapterSchema),
+    resolver: zodResolver(chapterSchema as any),
     defaultValues: {
       subject: "",
       unitName: "",
@@ -128,29 +128,33 @@ export default function ChapterDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{editingChapter ? "Edit Chapter" : "Add Chapter"}</DialogTitle>
-          <DialogDescription>
-            {editingChapter
-              ? "Make changes to the chapter details here."
-              : "Fill in the details to create a new chapter."}
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="sm:max-w-[800px] p-0 max-h-[90vh] overflow-y-auto bg-white">
+        <div className="px-10 pt-10 pb-6 border-b border-slate-100">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold tracking-tight text-slate-900">
+              {editingChapter ? "Edit Chapter" : "Create Chapter"}
+            </DialogTitle>
+            <DialogDescription className="text-slate-500 mt-2 text-base">
+              {editingChapter
+                ? "Update the configuration details for this chapter."
+                : "Fill in the details below to add a new chapter to a subject."}
+            </DialogDescription>
+          </DialogHeader>
+        </div>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="px-10 py-8 space-y-8">
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
               <FormField
                 control={form.control}
                 name="subject"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Subject <span className="text-destructive">*</span></FormLabel>
+                  <FormItem className="space-y-2.5">
+                    <FormLabel className="text-slate-700 font-semibold text-sm block mb-2">Subject <span className="text-destructive">*</span></FormLabel>
                     <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingSubjects}>
                       <FormControl>
-                        <SelectTrigger>
+                        <SelectTrigger className="h-12 px-4 bg-white border-slate-200 shadow-sm focus:ring-blue-500 text-base mt-2">
                           <SelectValue placeholder="Select a subject" />
                         </SelectTrigger>
                       </FormControl>
@@ -171,11 +175,11 @@ export default function ChapterDialog({
                 control={form.control}
                 name="difficulty"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Difficulty</FormLabel>
+                  <FormItem className="space-y-2.5">
+                    <FormLabel className="text-slate-700 font-semibold text-sm block mb-2">Difficulty</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger>
+                        <SelectTrigger className="h-12 px-4 bg-white border-slate-200 shadow-sm focus:ring-blue-500 text-base mt-2">
                           <SelectValue placeholder="Select difficulty" />
                         </SelectTrigger>
                       </FormControl>
@@ -191,15 +195,19 @@ export default function ChapterDialog({
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               <FormField
                 control={form.control}
                 name="unitName"
                 render={({ field }) => (
-                  <FormItem className="col-span-2">
-                    <FormLabel>Unit Name <span className="text-destructive">*</span></FormLabel>
+                  <FormItem className="space-y-2.5 col-span-2">
+                    <FormLabel className="text-slate-700 font-semibold text-sm block mb-2">Unit Name <span className="text-destructive">*</span></FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g. UNIT III — MAGNETIC EFFECTS" {...field} />
+                      <Input 
+                        placeholder="e.g. UNIT III — MAGNETIC EFFECTS" 
+                        className="h-12 px-4 bg-white border-slate-200 shadow-sm focus-visible:ring-blue-500 text-base mt-2" 
+                        {...field} 
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -209,10 +217,14 @@ export default function ChapterDialog({
                 control={form.control}
                 name="unitOrder"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Unit Order</FormLabel>
+                  <FormItem className="space-y-2.5">
+                    <FormLabel className="text-slate-700 font-semibold text-sm block mb-2">Unit Order</FormLabel>
                     <FormControl>
-                      <Input type="number" {...field} />
+                      <Input 
+                        type="number" 
+                        className="h-12 px-4 bg-white border-slate-200 shadow-sm focus-visible:ring-blue-500 text-base mt-2" 
+                        {...field} 
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -220,15 +232,19 @@ export default function ChapterDialog({
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
               <FormField
                 control={form.control}
                 name="chapterNumber"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Ch. No. <span className="text-destructive">*</span></FormLabel>
+                  <FormItem className="space-y-2.5">
+                    <FormLabel className="text-slate-700 font-semibold text-sm block mb-2">Ch. No. <span className="text-destructive">*</span></FormLabel>
                     <FormControl>
-                      <Input type="number" {...field} />
+                      <Input 
+                        type="number" 
+                        className="h-12 px-4 bg-white border-slate-200 shadow-sm focus-visible:ring-blue-500 text-base mt-2" 
+                        {...field} 
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -238,10 +254,14 @@ export default function ChapterDialog({
                 control={form.control}
                 name="title"
                 render={({ field }) => (
-                  <FormItem className="col-span-3">
-                    <FormLabel>Chapter Title <span className="text-destructive">*</span></FormLabel>
+                  <FormItem className="space-y-2.5 col-span-3">
+                    <FormLabel className="text-slate-700 font-semibold text-sm block mb-2">Chapter Title <span className="text-destructive">*</span></FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g. Magnetic Effects of Current" {...field} />
+                      <Input 
+                        placeholder="e.g. Magnetic Effects of Current" 
+                        className="h-12 px-4 bg-white border-slate-200 shadow-sm focus-visible:ring-blue-500 text-base mt-2" 
+                        {...field} 
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -253,10 +273,14 @@ export default function ChapterDialog({
               control={form.control}
               name="subtitle"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Subtitle (Optional)</FormLabel>
+                <FormItem className="space-y-2.5">
+                  <FormLabel className="text-slate-700 font-semibold text-sm block mb-2">Subtitle (Optional)</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g. Biot-Savart • Ampere's Law" {...field} />
+                    <Input 
+                      placeholder="e.g. Biot-Savart • Ampere's Law" 
+                      className="h-12 px-4 bg-white border-slate-200 shadow-sm focus-visible:ring-blue-500 text-base mt-2" 
+                      {...field} 
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -267,10 +291,14 @@ export default function ChapterDialog({
               control={form.control}
               name="description"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description</FormLabel>
+                <FormItem className="space-y-2.5">
+                  <FormLabel className="text-slate-700 font-semibold text-sm block mb-2">Description</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Detailed description..." {...field} />
+                    <Textarea 
+                      placeholder="Detailed description..." 
+                      className="min-h-[120px] px-4 py-3 bg-white border-slate-200 shadow-sm focus-visible:ring-blue-500 text-base mt-2 resize-y" 
+                      {...field} 
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -281,25 +309,33 @@ export default function ChapterDialog({
               control={form.control}
               name="tags"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Tags (Comma separated)</FormLabel>
+                <FormItem className="space-y-2.5">
+                  <FormLabel className="text-slate-700 font-semibold text-sm block mb-2">Tags (Comma separated)</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g. jee, neet, class12" {...field} />
+                    <Input 
+                      placeholder="e.g. jee, neet, class12" 
+                      className="h-12 px-4 bg-white border-slate-200 shadow-sm focus-visible:ring-blue-500 text-base mt-2" 
+                      {...field} 
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
               <FormField
                 control={form.control}
                 name="examWeightagePercent"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Exam Weightage (%)</FormLabel>
+                  <FormItem className="space-y-2.5">
+                    <FormLabel className="text-slate-700 font-semibold text-sm block mb-2">Exam Weightage (%)</FormLabel>
                     <FormControl>
-                      <Input type="number" {...field} />
+                      <Input 
+                        type="number" 
+                        className="h-12 px-4 bg-white border-slate-200 shadow-sm focus-visible:ring-blue-500 text-base mt-2" 
+                        {...field} 
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -310,10 +346,14 @@ export default function ChapterDialog({
                 control={form.control}
                 name="order"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Display Order</FormLabel>
+                  <FormItem className="space-y-2.5">
+                    <FormLabel className="text-slate-700 font-semibold text-sm block mb-2">Display Order</FormLabel>
                     <FormControl>
-                      <Input type="number" {...field} />
+                      <Input 
+                        type="number" 
+                        className="h-12 px-4 bg-white border-slate-200 shadow-sm focus-visible:ring-blue-500 text-base mt-2" 
+                        {...field} 
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -325,28 +365,38 @@ export default function ChapterDialog({
               control={form.control}
               name="isActive"
               render={({ field }) => (
-                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow-sm">
-                  <FormControl>
-                    <Checkbox
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                  <div className="space-y-1 leading-none">
-                    <FormLabel>Active Status</FormLabel>
-                    <p className="text-sm text-muted-foreground">
-                      Is this chapter visible to students?
+                <FormItem className="flex flex-row items-center justify-between p-6 rounded-2xl border border-slate-200 bg-slate-50/50 shadow-sm mt-4">
+                  <div className="space-y-1.5">
+                    <FormLabel className="text-slate-900 font-semibold text-lg">Active Status</FormLabel>
+                    <p className="text-base text-slate-500">
+                      Make this chapter visible to students.
                     </p>
                   </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      className="data-[state=checked]:bg-blue-600 scale-125"
+                    />
+                  </FormControl>
                 </FormItem>
               )}
             />
 
-            <div className="flex justify-end gap-2 pt-4">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <div className="flex justify-end gap-4 pt-6 border-t border-slate-100">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => onOpenChange(false)}
+                className="h-12 px-6 font-semibold border-slate-200 hover:bg-slate-50 text-slate-600 text-base"
+              >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isPending}>
+              <Button 
+                type="submit" 
+                disabled={isPending}
+                className="h-12 px-8 font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-sm text-base"
+              >
                 {isPending ? "Saving..." : "Save Chapter"}
               </Button>
             </div>

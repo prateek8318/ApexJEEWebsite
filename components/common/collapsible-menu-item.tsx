@@ -48,18 +48,18 @@ const CollapsibleMenuItem = ({
       <CollapsibleTrigger asChild>
         <Button
           className={cn(
-            "w-full justify-start text-accent transition-all duration-200 hover:bg-accent/10 hover:text-accent",
+            "w-full justify-start text-slate-300 transition-all duration-200 hover:bg-slate-800/50 hover:text-amber-400",
           )}
           size={"default"}
           variant="ghost"
         >
           <MenuIcon src={menuItem?.src} />
-          <span className="w-full truncate text-left text-accent transition-transform duration-300 ease-in-out">
+          <span className="w-full truncate text-left transition-transform duration-300 ease-in-out">
             {menuItem?.name}
           </span>
           <ChevronDown
             className={cn(
-              "ml-auto transition-transform duration-300 text-accent",
+              "ml-auto transition-transform duration-300",
               isCollapsibleOpen ? "rotate-180" : "rotate-0",
             )}
             size={16}
@@ -72,8 +72,8 @@ const CollapsibleMenuItem = ({
             className={cn(
               "w-full justify-start transition-all duration-200",
               path.includes(subMenuItem?.src)
-                ? "bg-accent text-primary font-semibold shadow-sm hover:bg-accent/90 hover:text-primary"
-                : "text-accent hover:bg-accent/10 hover:text-accent",
+                ? "bg-white/10 text-white font-semibold border-l-4 border-yellow-500 rounded-l-none hover:bg-white/15"
+                : "text-slate-300 hover:bg-slate-800/50 hover:text-amber-400",
             )}
             key={subMenuItem?.uuid}
             variant="ghost"
@@ -83,7 +83,6 @@ const CollapsibleMenuItem = ({
               <MenuIcon src={subMenuItem?.src} />
               <span className={cn(
                 "w-full truncate transition-all duration-300 ease-in-out",
-                path.includes(subMenuItem?.src) ? "text-primary" : "text-accent"
               )}>
                 {subMenuItem?.name}
               </span>
@@ -100,8 +99,7 @@ const CollapsibleMenuItem = ({
             <DropdownMenuTrigger asChild>
               <Button
                 className={cn(
-                  !path.includes(menuItem?.src) && "text-accent",
-                  "text-accent hover:bg-accent/10 hover:text-accent",
+                  "text-slate-300 hover:bg-slate-800/50 hover:text-amber-400",
                 )}
                 size={"icon"}
                 variant={path.includes(menuItem?.src) ? "default" : "ghost"}

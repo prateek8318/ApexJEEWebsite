@@ -19,7 +19,7 @@ import useSession from "@stores/session";
 
 const DashboardPage: React.FC = () => {
   const { session } = useSession();
-  const [greetingInfo, setGreetingInfo] = useState({ dateStr: "", weekNum: 1 });
+  const [greetingInfo, setGreetingInfo] = useState({ dateStr: "", weekNum: 1, greetingMsg: "Good morning" });
 
   useEffect(() => {
     const now = new Date();
@@ -35,10 +35,18 @@ const DashboardPage: React.FC = () => {
     const pastDaysOfYear = (now.getTime() - startOfYear.getTime()) / 86400000;
     const weekNum = Math.ceil((pastDaysOfYear + startOfYear.getDay() + 1) / 7);
     
-    setGreetingInfo({ dateStr, weekNum });
+    const hour = now.getHours();
+    let greetingMsg = "Good morning";
+    if (hour >= 12 && hour < 17) {
+      greetingMsg = "Good afternoon";
+    } else if (hour >= 17) {
+      greetingMsg = "Good evening";
+    }
+    
+    setGreetingInfo({ dateStr, weekNum, greetingMsg });
   }, []);
 
-  const userName = (session as any)?.name || "Rahul";
+  const userName = (session as any)?.name || "Student";
 
   return (
     <div className="flex flex-col w-full min-h-full bg-[#f4f6f9]">
@@ -51,7 +59,7 @@ const DashboardPage: React.FC = () => {
             {greetingInfo.dateStr || "LOADING DATE..."} • WEEK {greetingInfo.weekNum} OF 52
           </span>
           <h1 className="text-3xl md:text-4xl font-normal tracking-tight mb-3 text-slate-100">
-            Good morning, <span className="italic font-serif text-[#dfb15b] font-semibold">{userName}!</span>
+            {greetingInfo.greetingMsg}, <span className="italic font-serif text-[#dfb15b] font-semibold">{userName}!</span>
           </h1>
           <p className="text-slate-400 text-sm md:text-base max-w-2xl leading-relaxed font-light">
             You have 4 videos and 40 practice questions scheduled for today. Your mock rank improved by 683 positions in the last test — keep this momentum going.

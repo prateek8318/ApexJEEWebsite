@@ -20,8 +20,6 @@ import { LockKeyhole, LogIn, Mail } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { toast } from "@components/ui/toaster";
-import { encrypt } from "@lib/encrypt";
-import axios from "@config/axios";
 import { AxiosError } from "axios";
 import { useMutation } from "@tanstack/react-query";
 import { authApi } from "@lib/api/admin";
@@ -63,7 +61,7 @@ const LoginForm = ({
       return response;
     } else {
       // Hit the new student login endpoint
-      const response = await userAuthApi.login({ email, password });
+      const response = await userAuthApi.login({ identifier: email, password });
       return { response, values };
     }
   };
@@ -74,13 +72,25 @@ const LoginForm = ({
       toast.dismiss(onLoginToast);
       
       if (userType === "admin") {
-        setSession(response?.data?.user || response?.user || { name: "Admin" });
+        const userObj = response?.data?.user || response?.user || { name: "Admin" };
+        setSession({
+          ...userObj,
+          token: response?.token || "",
+        });
         toast.success("Login successful!");
         router.replace("/admin/dashboard"); // Redirect to admin dashboard
       } else {
+        const backendPayload = (response as any)?.response;
         const values = (response as any)?.values || response;
+        
+        const userObj = backendPayload?.data?.user || backendPayload?.user || { name: values?.email || "Student" };
+        
         // set session and redirect to dashboard
-        setSession((response as any)?.response?.data?.user || (response as any)?.response?.user || { name: values?.email || "Student" });
+        setSession({
+          ...userObj,
+          avatarUrl: userObj.profileImage || userObj.avatarUrl || null,
+          token: backendPayload?.token || "",
+        });
         toast.success("Login successful!");
         
         if (callbackUrl) {
@@ -171,12 +181,19 @@ const LoginForm = ({
           <span className="text-xs md:text-sm">
             Don't have an account?{" "}
             <Link
-              href="/auth/register"
+              href={userType === "admin" ? "/auth/admin-register" : "/auth/register"}
               className="font-semibold text-gray-900 underline-offset-2 hover:underline"
             >
               Register now
             </Link>
           </span>
+
+          <Link
+            href="/"
+            className="text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors"
+          >
+            ← Back to Homepage
+          </Link>
         </div>
       </form>
     </Form>
