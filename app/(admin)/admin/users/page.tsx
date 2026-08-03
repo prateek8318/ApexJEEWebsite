@@ -187,6 +187,7 @@ export default function AdminUsersPage() {
         <Table>
           <TableHeader className="bg-slate-50 border-b border-slate-100">
             <TableRow className="hover:bg-transparent">
+              <TableHead className="w-[50px] font-semibold text-slate-600 text-center">S.No.</TableHead>
               <TableHead className="font-semibold text-slate-600">Student Info</TableHead>
               <TableHead className="font-semibold text-slate-600">Exam Target</TableHead>
               <TableHead className="font-semibold text-slate-600">Contact</TableHead>
@@ -197,19 +198,22 @@ export default function AdminUsersPage() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center">
+                <TableCell colSpan={6} className="h-24 text-center">
                   Loading...
                 </TableCell>
               </TableRow>
             ) : users.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center">
+                <TableCell colSpan={6} className="h-24 text-center">
                   No users found.
                 </TableCell>
               </TableRow>
             ) : (
-              users.map((user: User) => (
+              users.map((user: User, index: number) => (
                 <TableRow key={user._id} className="hover:bg-slate-50/50 transition-colors group">
+                  <TableCell className="text-center font-medium text-slate-500">
+                    {index + 1}
+                  </TableCell>
                   <TableCell className="font-semibold text-slate-800">
                     <div className="flex flex-col">
                       <span className="flex items-center gap-2">

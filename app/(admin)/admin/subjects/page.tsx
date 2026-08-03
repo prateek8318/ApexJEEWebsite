@@ -116,6 +116,7 @@ export default function AdminSubjectsPage() {
         <Table>
           <TableHeader className="bg-slate-50 border-b border-slate-100">
             <TableRow className="hover:bg-transparent">
+              <TableHead className="w-[50px] font-semibold text-slate-600 text-center">S.No.</TableHead>
               <TableHead className="w-[100px] font-semibold text-slate-600">Icon</TableHead>
               <TableHead className="font-semibold text-slate-600">Name</TableHead>
               <TableHead className="font-semibold text-slate-600">Code</TableHead>
@@ -127,19 +128,22 @@ export default function AdminSubjectsPage() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center">
+                <TableCell colSpan={7} className="h-24 text-center">
                   Loading...
                 </TableCell>
               </TableRow>
             ) : subjects.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center">
+                <TableCell colSpan={7} className="h-24 text-center">
                   No subjects found.
                 </TableCell>
               </TableRow>
             ) : (
-              subjects.map((subject: Subject) => (
+              subjects.map((subject: Subject, index: number) => (
                 <TableRow key={subject._id} className="hover:bg-slate-50/50 transition-colors group">
+                  <TableCell className="text-center font-medium text-slate-500">
+                    {index + 1}
+                  </TableCell>
                   <TableCell>
                     {subject.icon ? (
                       <div className="relative h-10 w-10 overflow-hidden rounded-lg bg-slate-100 border border-slate-200">

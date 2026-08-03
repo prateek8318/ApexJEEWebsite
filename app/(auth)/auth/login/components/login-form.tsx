@@ -78,7 +78,7 @@ const LoginForm = ({
           token: response?.token || "",
         });
         toast.success("Login successful!");
-        router.replace("/admin/dashboard"); // Redirect to admin dashboard
+        router.replace("/admin/revenue"); // Redirect to admin revenue
       } else {
         const backendPayload = (response as any)?.response;
         const values = (response as any)?.values || response;

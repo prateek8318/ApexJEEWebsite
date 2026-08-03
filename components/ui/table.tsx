@@ -25,7 +25,7 @@ const TableHeader = ({
 }: HTMLAttributes<HTMLTableSectionElement> & {
   ref?: Ref<HTMLTableSectionElement>;
 }) => (
-  <thead ref={ref} className={cn("[&_tr]:border-b", className)} {...props} />
+  <thead ref={ref} className={cn("", className)} {...props} />
 );
 TableHeader.displayName = "TableHeader";
 
@@ -54,7 +54,7 @@ const TableFooter = ({
   <tfoot
     ref={ref}
     className={cn(
-      "bg-muted/50 border-t font-medium last:[&>tr]:border-b-0",
+      "bg-slate-50/50 border-t border-slate-100 font-medium last:[&>tr]:border-b-0",
       className,
     )}
     {...props}
@@ -72,7 +72,7 @@ const TableRow = ({
   <tr
     ref={ref}
     className={cn(
-      "data-[state=selected]:bg-muted hover:bg-muted/50 border-b transition-colors",
+      "border-b border-slate-50 hover:bg-slate-50/50 transition-colors data-[state=selected]:bg-slate-50",
       className,
     )}
     {...props}
@@ -90,7 +90,7 @@ const TableHead = ({
   <th
     ref={ref}
     className={cn(
-      "text-muted-foreground h-12 px-4 text-left align-middle font-medium [&:has([role=checkbox])]:pr-0",
+      "pb-3 pt-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-left align-middle [&:has([role=checkbox])]:pr-0",
       className,
     )}
     {...props}
@@ -107,7 +107,7 @@ const TableCell = ({
 }) => (
   <td
     ref={ref}
-    className={cn("p-4 align-middle [&:has([role=checkbox])]:pr-0", className)}
+    className={cn("py-5 px-4 text-sm font-medium text-slate-600 align-middle [&:has([role=checkbox])]:pr-0", className)}
     {...props}
   />
 );

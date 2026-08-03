@@ -112,7 +112,7 @@ export default function AdminChaptersPage() {
         <Table>
           <TableHeader className="bg-slate-50 border-b border-slate-100">
             <TableRow className="hover:bg-transparent">
-              <TableHead className="w-[80px] font-semibold text-slate-600">Ch. No.</TableHead>
+              <TableHead className="w-[80px] font-semibold text-slate-600 text-center">Ch. No.</TableHead>
               <TableHead className="font-semibold text-slate-600">Subject</TableHead>
               <TableHead className="font-semibold text-slate-600">Unit Name</TableHead>
               <TableHead className="font-semibold text-slate-600">Chapter Title</TableHead>

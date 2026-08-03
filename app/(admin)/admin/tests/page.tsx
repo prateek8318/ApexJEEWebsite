@@ -143,6 +143,7 @@ export default function AdminTestsPage() {
         <Table>
           <TableHeader className="bg-slate-50 border-b border-slate-100">
             <TableRow className="hover:bg-transparent">
+              <TableHead className="w-[50px] font-semibold text-slate-600 text-center">S.No.</TableHead>
               <TableHead className="font-semibold text-slate-600">Test Title</TableHead>
               <TableHead className="font-semibold text-slate-600">Category</TableHead>
               <TableHead className="font-semibold text-slate-600">Duration</TableHead>
@@ -154,19 +155,22 @@ export default function AdminTestsPage() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center">
+                <TableCell colSpan={7} className="h-24 text-center">
                   Loading...
                 </TableCell>
               </TableRow>
             ) : tests.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center">
+                <TableCell colSpan={7} className="h-24 text-center">
                   No tests found.
                 </TableCell>
               </TableRow>
             ) : (
-              tests.map((test: Test) => (
+              tests.map((test: Test, index: number) => (
                 <TableRow key={test._id} className="hover:bg-slate-50/50 transition-colors group">
+                  <TableCell className="text-center font-medium text-slate-500">
+                    {index + 1}
+                  </TableCell>
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-3">
                       <div className="bg-blue-100 p-2 rounded-lg">

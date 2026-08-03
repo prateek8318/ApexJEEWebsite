@@ -158,6 +158,7 @@ export default function AdminQuestionsPage() {
         <Table>
           <TableHeader className="bg-slate-50 border-b border-slate-100">
             <TableRow className="hover:bg-transparent">
+              <TableHead className="w-[50px] font-semibold text-slate-600 text-center">S.No.</TableHead>
               <TableHead className="w-[350px] font-semibold text-slate-600">Question Snippet</TableHead>
               <TableHead className="font-semibold text-slate-600">Subject</TableHead>
               <TableHead className="font-semibold text-slate-600">Chapter</TableHead>
@@ -169,19 +170,22 @@ export default function AdminQuestionsPage() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center">
+                <TableCell colSpan={7} className="h-24 text-center">
                   Loading...
                 </TableCell>
               </TableRow>
             ) : questions.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center">
+                <TableCell colSpan={7} className="h-24 text-center">
                   No questions found.
                 </TableCell>
               </TableRow>
             ) : (
-              questions.map((question: Question) => (
+              questions.map((question: Question, index: number) => (
                 <TableRow key={question._id} className="hover:bg-slate-50/50 transition-colors group">
+                  <TableCell className="text-center font-medium text-slate-500">
+                    {index + 1}
+                  </TableCell>
                   <TableCell className="font-medium text-slate-800">
                     <div className="truncate max-w-[320px]" title={question.questionText}>
                       {question.questionText}

@@ -1,6 +1,7 @@
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { ReactNode } from "react";
+import { cn } from "@/lib/utils";
 
 interface AdminTableContainerProps {
   searchPlaceholder: string;
@@ -33,25 +34,25 @@ export function AdminTableContainer({
   const ringColor = ringColorMap[colorTheme] || ringColorMap.indigo;
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between gap-4">
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 flex flex-col gap-6 mt-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center w-full max-w-md relative">
           <Search className="h-4 w-4 absolute left-3 text-slate-400" />
           <Input 
             placeholder={searchPlaceholder} 
             value={searchValue}
             onChange={(e) => onSearchChange(e.target.value)}
-            className={`pl-9 h-11 bg-white border-slate-200 shadow-sm rounded-lg ${ringColor}`}
+            className={cn(`pl-9 h-10 bg-slate-50/50 border border-slate-200 shadow-sm rounded-lg text-sm outline-none focus:border-blue-500`, ringColor)}
           />
         </div>
         {actionRight && (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
             {actionRight}
           </div>
         )}
       </div>
 
-      <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      <div className="overflow-x-auto">
         {children}
       </div>
     </div>

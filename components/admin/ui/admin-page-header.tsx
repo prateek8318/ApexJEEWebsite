@@ -23,8 +23,6 @@ const themeMap = {
 };
 
 export function AdminPageHeader({
-  title,
-  description,
   buttonText,
   onAdd,
   icon,
@@ -34,28 +32,17 @@ export function AdminPageHeader({
   const theme = themeMap[colorTheme] || themeMap.indigo;
 
   return (
-    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-6 pb-6 border-b border-slate-200/80 mb-2">
-      <div className="flex flex-col gap-1.5">
-        <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-          {title}
-        </h1>
-        <p className="text-base text-slate-500 max-w-2xl">
-          {description}
-        </p>
-      </div>
-      
-      <div className="flex items-center gap-3 w-full sm:w-auto">
-        {extraButtons}
-        {buttonText && onAdd && (
-          <Button 
-            onClick={onAdd} 
-            className={`${theme.button} text-white shadow-sm hover:shadow-md h-10 px-5 rounded-lg font-medium transition-all w-full sm:w-auto`}
-          >
-            {icon && <span className="mr-2 h-4 w-4 flex items-center justify-center">{icon}</span>}
-            {buttonText}
-          </Button>
-        )}
-      </div>
+    <div className="flex justify-end items-center gap-3 w-full sm:w-auto mb-4">
+      {extraButtons}
+      {buttonText && onAdd && (
+        <Button 
+          onClick={onAdd} 
+          className={`${theme.button} text-white shadow-md hover:shadow-lg h-10 px-6 rounded-lg font-bold text-sm transition-all w-full sm:w-auto`}
+        >
+          {icon && <span className="mr-2 h-4 w-4 flex items-center justify-center">{icon}</span>}
+          {buttonText}
+        </Button>
+      )}
     </div>
   );
 }
