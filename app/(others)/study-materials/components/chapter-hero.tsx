@@ -1,26 +1,15 @@
 import { Zap } from "lucide-react";
 import { cn } from "@lib/utils";
-import type { SelfLearningChapter } from "@/types/SelfLearning";
+import type { Chapter } from "@/types/user-api";
 
 type Props = {
-  chapter: SelfLearningChapter;
+  chapter: Chapter;
   subjectLabel: string;
 };
 
 const ChapterHero = ({ chapter, subjectLabel }: Props) => {
-  const statusLabel =
-    chapter.status === "completed"
-      ? "Completed"
-      : chapter.status === "in-progress"
-        ? "In Progress"
-        : "Not Started";
-
-  const statusColor =
-    chapter.status === "completed"
-      ? "bg-emerald-500"
-      : chapter.status === "in-progress"
-        ? "bg-amber-400"
-        : "bg-slate-400";
+  const statusLabel = "Not Started";
+  const statusColor = "bg-slate-400";
 
   return (
     <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#0a1628] via-[#0f1f3d] to-[#0a1628] px-8 py-7 text-white shadow-lg">
@@ -39,19 +28,19 @@ const ChapterHero = ({ chapter, subjectLabel }: Props) => {
       </div>
 
       <p className="relative mt-5 text-sm text-slate-400">
-        Chapter {String(chapter.number).padStart(2, "0")}
+        Chapter {String(chapter.chapterNumber).padStart(2, "0")}
       </p>
       <h1 className="relative mt-1 font-serif text-3xl font-bold tracking-tight text-white md:text-4xl">
         {chapter.title}
       </h1>
       <p className="relative mt-3 text-sm text-slate-400">
-        {chapter.subtopics.join(" • ")}
+        {chapter.description || "Learn the concepts of this chapter."}
       </p>
 
       <div className="relative mt-8 flex flex-wrap gap-10">
-        <StatBlock value={chapter.videoCount} label="Videos" />
-        <StatBlock value={chapter.questionCount} label="Questions" />
-        <StatBlock value={chapter.pdfCount} label="PDF Notes" />
+        <StatBlock value={chapter.videosCount || 0} label="Videos" />
+        <StatBlock value={chapter.questionsCount || 0} label="Questions" />
+        <StatBlock value={chapter.notesCount || 0} label="PDF Notes" />
       </div>
     </div>
   );

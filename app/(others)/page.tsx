@@ -1,12 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { userSubjectApi } from "@/lib/api/user/subject";
 import ChapterSidebar from "./study-materials/components/chapter-sidebar";
-// import { QuestionPagination } from "./components/QuestionPagination";
-// import { QuestionHeader } from "./components/QuestionHeader";
-// import { QuestionBody } from "./components/QuestionBody";
-// import { QuestionActionBar } from "./components/QuestionActionBar";
-// import { SessionOverview } from "./components/SessionOverview";
 import { QuestionPagination } from "./practice-questions/components/QuestionPagination";
 import { QuestionHeader } from "./practice-questions/components/QuestionHeader";
 import { QuestionBody } from "./practice-questions/components/QuestionBody";
@@ -74,7 +71,36 @@ type QuestionStatus = "correct" | "wrong" | "skipped" | "current" | "untouched";
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function Page() {
-  const [activeChapter, setActiveChapter]   = useState("03.01");
+  const [activeSubjectId, setActiveSubjectId] = useState<string | null>(null);
+  const [activeChapterId, setActiveChapterId] = useState<string | null>(null);
+
+  // Fetch all active subjects
+  const { data: subjectsData } = useQuery({
+    queryKey: ["subjects"],
+    queryFn: () => userSubjectApi.getAllSubjects(),
+  });
+  const subjects = subjectsData?.data || [];
+
+  useEffect(() => {
+    if (subjects.length > 0 && !activeSubjectId) {
+      setActiveSubjectId(subjects[0]._id);
+    }
+  }, [subjects, activeSubjectId]);
+
+  // Fetch chapters for active subject
+  const { data: chaptersData, isLoading: isChaptersLoading } = useQuery({
+    queryKey: ["chapters", "subject", activeSubjectId],
+    queryFn: () => userSubjectApi.getChaptersBySubject(activeSubjectId!),
+    enabled: !!activeSubjectId,
+  });
+  const chapters = chaptersData?.data || [];
+
+  useEffect(() => {
+    if (chapters.length > 0 && (!activeChapterId || !chapters.find(c => c._id === activeChapterId))) {
+      setActiveChapterId(chapters[0]._id);
+    }
+  }, [chapters, activeChapterId]);
+
   const [currentQ, setCurrentQ]             = useState(1);
   const [selected, setSelected]             = useState<string | null>(null);
   const [showSolution, setShowSolution]     = useState(false);
@@ -119,8 +145,13 @@ export default function Page() {
 
       {/* ── LEFT: Chapter sidebar ── */}
       <ChapterSidebar
-        activeChapterId={activeChapter}
-        onChapterSelect={setActiveChapter}
+        subjects={subjects}
+        chapters={chapters}
+        activeSubjectId={activeSubjectId}
+        onSubjectSelect={setActiveSubjectId}
+        activeChapterId={activeChapterId}
+        onChapterSelect={setActiveChapterId}
+        isLoadingChapters={isChaptersLoading}
       />
 
       {/* ── CENTER: question area ── */}

@@ -14,5 +14,10 @@ export const userTopicApi = {
   getTopicById: async (id: string): Promise<ApiResponse<Topic>> => {
     const response = await userClient.get(`/topics/${id}`);
     return response.data;
+  },
+
+  getTopicStats: async (id: string): Promise<ApiResponse<any>> => {
+    const response = await userClient.get(`/topicsStats/${id}`);
+    return response.data;
   }
 };

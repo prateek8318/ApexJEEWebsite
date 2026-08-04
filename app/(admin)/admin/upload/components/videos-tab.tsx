@@ -13,6 +13,8 @@ import { Video as VideoType, Subject, Chapter } from "@/types/admin-api";
 
 export function VideosTab() {
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
   
   // Form States
   const [youtubeUrl, setYoutubeUrl] = useState("");
@@ -26,19 +28,19 @@ export function VideosTab() {
   const [examTag, setExamTag] = useState("");
   const [order, setOrder] = useState("0");
   const [isActive, setIsActive] = useState(true);
-  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const [noteFile, setNoteFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const queryClient = useQueryClient();
 
   const { data: videosData, isLoading: isLoadingVideos } = useQuery({
-    queryKey: ["admin-videos", search],
-    queryFn: () => videosApi.getAllVideos({ search }),
+    queryKey: ["admin-videos", search, page, limit],
+    queryFn: () => videosApi.getAllVideos({ search, page, limit }),
   });
 
   const { data: subjectsData } = useQuery({
     queryKey: ["admin-subjects"],
-    queryFn: () => subjectsApi.getAllSubjects(""),
+    queryFn: () => subjectsApi.getAllSubjects({}),
   });
 
   const { data: chaptersData } = useQuery({
@@ -65,7 +67,7 @@ export function VideosTab() {
       queryClient.invalidateQueries({ queryKey: ["admin-videos"] });
       // Reset form
       setYoutubeUrl(""); setTitle(""); setSubject(""); setChapter(""); setTopic(""); setExamTag("");
-      setDescription(""); setDurationMinutes("0"); setOrder("0"); setIsActive(true); setThumbnailFile(null);
+      setDescription(""); setDurationMinutes("0"); setOrder("0"); setIsActive(true); setNoteFile(null);
       if (previewUrl && previewUrl.startsWith('blob:')) URL.revokeObjectURL(previewUrl);
       setPreviewUrl(null);
     },
@@ -100,7 +102,7 @@ export function VideosTab() {
     if (examTag) formData.append("examTag", examTag);
     formData.append("order", order);
     formData.append("isActive", String(isActive));
-    if (thumbnailFile) formData.append("thumbnailUrl", thumbnailFile);
+    if (noteFile) formData.append("noteUrl", noteFile);
 
     createMutation.mutate(formData);
   };
@@ -160,29 +162,25 @@ export function VideosTab() {
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-[11px] font-bold text-slate-600">Thumbnail (Optional)</label>
-              <div className="relative h-[42px] border-2 border-dashed border-slate-200 rounded-lg flex items-center justify-center bg-slate-50 overflow-hidden">
-                {previewUrl ? (
-                  <img src={previewUrl} alt="Thumbnail preview" className="w-full h-full object-cover" />
+              <label className="text-[11px] font-bold text-slate-600">Lecture Note (PDF)</label>
+              <div className="relative group h-20 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 flex items-center justify-center overflow-hidden transition-colors hover:border-slate-300 hover:bg-slate-100 cursor-pointer">
+                {noteFile ? (
+                  <div className="text-sm font-semibold text-blue-600 px-4 truncate">{noteFile.name}</div>
                 ) : (
-                  <span className="text-xs font-semibold text-slate-500">Upload Image</span>
+                  <div className="flex flex-col items-center gap-1 text-slate-500">
+                    <Video size={20} />
+                    <span className="text-xs font-semibold">Upload PDF/Doc</span>
+                  </div>
                 )}
                 <input 
                   type="file" 
-                  accept="image/*" 
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" 
+                  accept=".pdf,.doc,.docx" 
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                   onChange={(e) => {
-                    const files = e.target.files;
-                    if (files && files.length > 0) {
-                      setThumbnailFile(files[0]);
-                      const newPreviewUrl = URL.createObjectURL(files[0]);
-                      if (previewUrl && previewUrl.startsWith('blob:')) URL.revokeObjectURL(previewUrl);
-                      setPreviewUrl(newPreviewUrl);
-                    } else {
-                      setThumbnailFile(null);
-                      setPreviewUrl(null);
+                    if (e.target.files && e.target.files[0]) {
+                      setNoteFile(e.target.files[0]);
                     }
-                  }} 
+                  }}
                 />
               </div>
             </div>
@@ -228,7 +226,7 @@ export function VideosTab() {
           </div>
 
           <div className="pt-4 flex items-center justify-end gap-4 border-t border-slate-100">
-            <button type="button" onClick={() => { setYoutubeUrl(""); setTitle(""); setSubject(""); setChapter(""); setTopic(""); setExamTag(""); setDescription(""); setDurationMinutes("0"); setOrder("0"); setIsActive(true); setThumbnailFile(null); setPreviewUrl(null); }} className="px-6 py-2.5 bg-white border border-slate-200 text-slate-600 font-bold text-sm rounded-lg hover:bg-slate-50">
+            <button type="button" onClick={() => { setYoutubeUrl(""); setTitle(""); setSubject(""); setChapter(""); setTopic(""); setExamTag(""); setDescription(""); setDurationMinutes("0"); setOrder("0"); setIsActive(true); setPreviewUrl(null); }} className="px-6 py-2.5 bg-white border border-slate-200 text-slate-600 font-bold text-sm rounded-lg hover:bg-slate-50">
               Clear Form
             </button>
             <button type="submit" disabled={createMutation.isPending} className="px-6 py-2.5 bg-[#F5A623] text-white font-bold text-sm rounded-lg hover:bg-orange-500 flex items-center gap-2 disabled:opacity-50">
@@ -243,7 +241,7 @@ export function VideosTab() {
           <h3 className="text-lg font-bold text-slate-800">Recent Videos Added</h3>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-            <input value={search} onChange={(e) => setSearch(e.target.value)} type="text" placeholder="Search videos..." className="pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-500 w-64 bg-slate-50/50" />
+            <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} type="text" placeholder="Search videos..." className="pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-500 w-64 bg-slate-50/50" />
           </div>
         </div>
         <div className="overflow-x-auto">
@@ -294,6 +292,46 @@ export function VideosTab() {
               )}
             </tbody>
           </table>
+        </div>
+        <div className="flex items-center justify-between mt-4 border-t border-slate-100 pt-4">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-500">Rows per page:</span>
+            <select
+              value={limit}
+              onChange={(e) => {
+                setLimit(Number(e.target.value));
+                setPage(1);
+              }}
+              className="text-xs border border-slate-200 rounded px-2 py-1 outline-none bg-white text-slate-700"
+            >
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+          </div>
+          <span className="text-xs text-slate-500">
+            Showing {videos.length} of {videosData?.totalResult  || 0} videos
+          </span>
+          <div className="flex items-center gap-2">
+            <button 
+              disabled={page === 1}
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              className="px-3 py-1 border border-slate-200 rounded text-xs hover:bg-slate-50 disabled:opacity-50 font-medium text-slate-600"
+            >
+              Previous
+            </button>
+            <span className="text-xs font-medium text-slate-700">
+              Page {page} of {videosData?.totalPage  || 1}
+            </span>
+            <button 
+              disabled={page === (videosData?.totalPage  || 1)}
+              onClick={() => setPage(p => p + 1)}
+              className="px-3 py-1 border border-slate-200 rounded text-xs hover:bg-slate-50 disabled:opacity-50 font-medium text-slate-600"
+            >
+              Next
+            </button>
+          </div>
         </div>
       </div>
     </>

@@ -47,7 +47,8 @@ const managementLinks = [
 const studyMaterialLinks = [
   { name: "Upload Center", href: "/admin/upload", icon: Upload },
   { name: "Questions Bank", href: "/admin/questions", icon: Database },
-  { name: "Test Series", href: "/admin/tests", icon: FileQuestion },
+  { name: "Practice Tests", href: "/admin/practice-tests", icon: FileQuestion },
+  { name: "Mock Tests", href: "/admin/mock-tests", icon: FileQuestion },
 ];
 
 export default function AdminSidebar() {

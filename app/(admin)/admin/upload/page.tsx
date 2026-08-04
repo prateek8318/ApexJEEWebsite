@@ -13,7 +13,7 @@ import { useQuery } from "@tanstack/react-query";
 import { videosApi } from "@/lib/api/admin/videos";
 import { notesApi } from "@/lib/api/admin/notes";
 import { questionsApi } from "@/lib/api/admin/questions";
-import { testsApi } from "@/lib/api/admin/tests";
+
 
 
 
@@ -26,13 +26,14 @@ export default function UploadStudyMaterial() {
 
   const { data: videosData } = useQuery({ queryKey: ["admin-videos"], queryFn: () => videosApi.getAllVideos() });
   const { data: notesData } = useQuery({ queryKey: ["admin-notes"], queryFn: () => notesApi.getAllNotes() });
-  const { data: questionsData } = useQuery({ queryKey: ["admin-questions"], queryFn: () => questionsApi.getAllQuestions() });
-  const { data: testsData } = useQuery({ queryKey: ["admin-tests"], queryFn: () => testsApi.getAllTests() });
+  const { data: practiceQuestionsData } = useQuery({ queryKey: ["admin-questions", "practice"], queryFn: () => questionsApi.getAllQuestions({ sourceType: "practice" }) });
+  const { data: mockQuestionsData } = useQuery({ queryKey: ["admin-questions", "mock"], queryFn: () => questionsApi.getAllQuestions({ sourceType: "mock" }) });
+
 
   const videosCount = videosData?.results || videosData?.data?.length || 0;
   const notesCount = notesData?.results || notesData?.data?.length || 0;
-  const questionsCount = questionsData?.results || questionsData?.data?.length || 0;
-  const testsCount = testsData?.results || testsData?.data?.length || 0;
+  const practiceQuestionsCount = practiceQuestionsData?.totalResult || practiceQuestionsData?.data?.length || 0;
+  const mockQuestionsCount = mockQuestionsData?.totalResult || mockQuestionsData?.data?.length || 0;
 
   return (
     <div className="w-full min-h-screen bg-[#F8FAFC] pb-10">
@@ -88,7 +89,7 @@ export default function UploadStudyMaterial() {
             </div>
             <h3 className={cn("text-base font-bold", activeTab === 'practice' ? "text-slate-800" : "text-slate-500")}>Practice Questions</h3>
             <p className="text-[11px] text-slate-400 mt-1 mb-4">Chapter-wise question bank</p>
-            <span className={cn("text-[10px] font-bold px-3 py-1 rounded-full", activeTab === 'practice' ? "text-emerald-500 bg-emerald-50" : "text-slate-500 bg-slate-100")}>{questionsCount} Qs</span>
+            <span className={cn("text-[10px] font-bold px-3 py-1 rounded-full", activeTab === 'practice' ? "text-emerald-500 bg-emerald-50" : "text-slate-500 bg-slate-100")}>{practiceQuestionsCount} Qs</span>
           </button>
 
           <button 
@@ -104,8 +105,8 @@ export default function UploadStudyMaterial() {
               <Clock size={24} />
             </div>
             <h3 className={cn("text-base font-bold", activeTab === 'mocks' ? "text-slate-800" : "text-slate-500")}>Mock Test Questions</h3>
-            <p className="text-[11px] text-slate-400 mt-1 mb-4">Full mock test paper builder</p>
-            <span className={cn("text-[10px] font-bold px-3 py-1 rounded-full", activeTab === 'mocks' ? "text-purple-500 bg-purple-50" : "text-slate-500 bg-slate-100")}>{testsCount} mocks</span>
+            <p className="text-[11px] text-slate-400 mt-1 mb-4">Mock test question bank</p>
+            <span className={cn("text-[10px] font-bold px-3 py-1 rounded-full", activeTab === 'mocks' ? "text-purple-500 bg-purple-50" : "text-slate-500 bg-slate-100")}>{mockQuestionsCount} Qs</span>
           </button>
         </div>
 

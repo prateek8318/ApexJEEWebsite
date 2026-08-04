@@ -44,7 +44,7 @@ const videoSchema = z.object({
   title: z.string().min(1, "Title is required."),
   description: z.string().optional(),
   youtubeUrl: z.string().min(1, "YouTube URL is required."),
-  thumbnailUrl: z.any().optional(), // file upload
+  noteUrl: z.any().optional(), // file upload
   durationMinutes: z.coerce.number().default(0),
   difficulty: z.enum(["easy", "medium", "hard"]).default("medium"),
   examTag: z.string().optional(),
@@ -72,7 +72,7 @@ export default function VideoDialog({
   
   const [selectedSubject, setSelectedSubject] = useState<string>("");
   const [selectedChapter, setSelectedChapter] = useState<string>("");
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [fileName, setFileName] = useState<string | null>(null);
 
   const { data: subjectsData, isLoading: isLoadingSubjects } = useQuery({
     queryKey: ["admin-subjects"],
@@ -121,9 +121,9 @@ export default function VideoDialog({
       setSelectedSubject(subjectId);
       setSelectedChapter(chapterId);
       
-      setPreviewUrl(
-        editingVideo.thumbnailUrl 
-          ? (typeof editingVideo.thumbnailUrl === 'string' ? editingVideo.thumbnailUrl : (editingVideo.thumbnailUrl as any).url)
+      setFileName(
+        editingVideo.noteUrl 
+          ? "Existing Lecture Note"
           : null
       );
 
@@ -143,7 +143,7 @@ export default function VideoDialog({
     } else {
       setSelectedSubject("");
       setSelectedChapter("");
-      setPreviewUrl(null);
+      setFileName(null);
       form.reset({
         subject: "",
         chapter: "",
@@ -158,16 +158,10 @@ export default function VideoDialog({
         isActive: true,
       });
     }
-    
-    return () => {
-      if (previewUrl && previewUrl.startsWith('blob:')) {
-        URL.revokeObjectURL(previewUrl);
-      }
-    };
   }, [editingVideo, form, isOpen]);
 
   const handleFormSubmit = (values: VideoFormValues) => {
-    const file = form.getValues("thumbnailUrl");
+    const file = form.getValues("noteUrl");
     onSubmit(values, file instanceof FileList && file.length > 0 ? file[0] : null);
   };
 
@@ -321,35 +315,31 @@ export default function VideoDialog({
               />
               <FormField
                 control={form.control}
-                name="thumbnailUrl"
+                name="noteUrl"
                 render={({ field: { value, onChange, ...field } }) => (
                   <FormItem className="space-y-2.5">
-                    <FormLabel className="text-slate-700 font-semibold text-sm block mb-2">Thumbnail (Optional)</FormLabel>
+                    <FormLabel className="text-slate-700 font-semibold text-sm block mb-2">Lecture Note (PDF)</FormLabel>
                     <FormControl>
                       <div className="relative group mt-2 h-16">
                         <div className="absolute inset-0 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50 flex items-center justify-center overflow-hidden transition-colors group-hover:border-slate-300 group-hover:bg-slate-100">
-                          {previewUrl ? (
-                            <img src={previewUrl} alt="Thumbnail preview" className="w-full h-full object-cover" />
+                          {fileName ? (
+                            <div className="text-sm font-semibold text-blue-600 px-4 truncate">{fileName}</div>
                           ) : (
                             <div className="flex items-center gap-2 text-slate-500">
                               <ImageIcon className="w-5 h-5" />
-                              <span className="text-sm font-semibold">Upload Image</span>
+                              <span className="text-sm font-semibold">Upload PDF/Doc</span>
                             </div>
                           )}
                         </div>
                         <Input
                           type={"file" as any}
-                          accept="image/*"
+                          accept=".pdf,.doc,.docx"
                           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                           onChange={(e) => {
                             const files = e.target.files;
                             onChange(files);
                             if (files && files.length > 0) {
-                              const newPreviewUrl = URL.createObjectURL(files[0]);
-                              if (previewUrl && previewUrl.startsWith('blob:')) {
-                                URL.revokeObjectURL(previewUrl);
-                              }
-                              setPreviewUrl(newPreviewUrl);
+                              setFileName(files[0].name);
                             }
                           }}
                           {...field}

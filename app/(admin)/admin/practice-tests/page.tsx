@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { testsApi } from "@/lib/api/admin/tests";
+import { topicsApi } from "@/lib/api/admin/topics";
 import { 
   Table, 
   TableBody, 
@@ -22,23 +23,41 @@ import Link from "next/link";
 import { AdminPageHeader } from "@/components/admin/ui/admin-page-header";
 import { AdminTableContainer } from "@/components/admin/ui/admin-table-container";
 
-export default function AdminTestsPage() {
+export default function AdminPracticeTestsPage() {
   const [search, setSearch] = useState("");
-  const [modeFilter, setModeFilter] = useState("all");
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [topicFilter, setTopicFilter] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTest, setEditingTest] = useState<Test | null>(null);
   
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
-    queryKey: ["admin-tests", search, modeFilter, categoryFilter],
+    queryKey: ["admin-practice-tests", search, categoryFilter, page, limit],
     queryFn: () => testsApi.getAllTests({ 
       search, 
-      ...(modeFilter !== "all" && { mode: modeFilter }), 
-      ...(categoryFilter !== "all" && { testCategory: categoryFilter }) 
+      mode: "practice", 
+      page,
+      limit,
+      ...(categoryFilter !== "all" && { testCategory: categoryFilter }),
+      ...(topicFilter !== "all" && { topic: topicFilter })
     }),
   });
+
+  const { data: topicsData, isLoading: isLoadingTopics } = useQuery({
+    queryKey: ["admin-topics-all"],
+    queryFn: () => topicsApi.getAllTopics({ limit: 1000 }),
+  });
+  const topicsList = topicsData?.data || [];
+
+  const getTopicName = (topicId: any) => {
+    if (!topicId) return "-";
+    if (typeof topicId === "object" && topicId.title) return topicId.title;
+    const t = topicsList.find((t: any) => t._id === topicId);
+    return t ? t.title : "-";
+  };
 
   const tests = data?.data || [];
 
@@ -46,7 +65,7 @@ export default function AdminTestsPage() {
     mutationFn: (id: string) => testsApi.deleteTest(id),
     onSuccess: () => {
       toast.success("Test deleted successfully");
-      queryClient.invalidateQueries({ queryKey: ["admin-tests"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-practice-tests"] });
     },
     onError: () => {
       toast.error("Failed to delete test");
@@ -64,7 +83,7 @@ export default function AdminTestsPage() {
     onSuccess: () => {
       toast.success(editingTest ? "Test updated successfully" : "Test created successfully");
       setDialogOpen(false);
-      queryClient.invalidateQueries({ queryKey: ["admin-tests"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-practice-tests"] });
     },
     onError: (error: any) => {
       toast.error(error?.response?.data?.message || "An error occurred");
@@ -90,40 +109,29 @@ export default function AdminTestsPage() {
   const handleSave = (values: TestFormValues) => {
     saveMutation.mutate({ 
       id: editingTest?._id, 
-      data: values
+      data: { ...values, mode: "practice" }
     });
   };
 
   return (
     <div className="flex flex-col gap-6 w-full px-4 sm:px-6 lg:px-8 py-6">
       <AdminPageHeader 
-        title="Tests"
-        description="Manage mock tests and practice exams."
-        buttonText="Create Test"
+        title="Practice Tests"
+        description="Manage practice exams and questions."
+        buttonText="Create Practice Test"
         onAdd={handleOpenAdd}
         icon={<Plus />}
         colorTheme="blue"
       />
 
       <AdminTableContainer 
-        searchPlaceholder="Search tests..."
+        searchPlaceholder="Search practice tests..."
         searchValue={search}
-        onSearchChange={setSearch}
+        onSearchChange={(val) => { setSearch(val); setPage(1); }}
         colorTheme="blue"
         actionRight={
           <>
-            <Select value={modeFilter} onValueChange={setModeFilter}>
-              <SelectTrigger className="w-[140px] h-11 bg-white border-slate-200">
-                <SelectValue placeholder="All Modes" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Modes</SelectItem>
-                <SelectItem value="practice">Practice</SelectItem>
-                <SelectItem value="mock">Mock</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <Select value={categoryFilter} onValueChange={(val) => { setCategoryFilter(val); setPage(1); }}>
               <SelectTrigger className="w-[160px] h-11 bg-white border-slate-200">
                 <SelectValue placeholder="All Categories" />
               </SelectTrigger>
@@ -137,6 +145,17 @@ export default function AdminTestsPage() {
                 <SelectItem value="custom">Custom</SelectItem>
               </SelectContent>
             </Select>
+            <Select value={topicFilter} onValueChange={(val) => { setTopicFilter(val); setPage(1); }}>
+              <SelectTrigger className="w-[160px] h-11 bg-white border-slate-200">
+                <SelectValue placeholder="All Topics" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Topics</SelectItem>
+                {!isLoadingTopics && topicsList.map((t: any) => (
+                  <SelectItem key={t._id} value={t._id}>{t.title}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </>
         }
       >
@@ -146,6 +165,7 @@ export default function AdminTestsPage() {
               <TableHead className="w-[50px] font-semibold text-slate-600 text-center">S.No.</TableHead>
               <TableHead className="font-semibold text-slate-600">Test Title</TableHead>
               <TableHead className="font-semibold text-slate-600">Category</TableHead>
+              <TableHead className="font-semibold text-slate-600">Topic</TableHead>
               <TableHead className="font-semibold text-slate-600">Duration</TableHead>
               <TableHead className="font-semibold text-slate-600">Questions</TableHead>
               <TableHead className="font-semibold text-slate-600">Status</TableHead>
@@ -155,13 +175,13 @@ export default function AdminTestsPage() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center">
+                <TableCell colSpan={8} className="h-24 text-center">
                   Loading...
                 </TableCell>
               </TableRow>
             ) : tests.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center">
+                <TableCell colSpan={8} className="h-24 text-center">
                   No tests found.
                 </TableCell>
               </TableRow>
@@ -195,6 +215,9 @@ export default function AdminTestsPage() {
                   </TableCell>
                   <TableCell className="capitalize text-slate-600 font-medium">
                     {test.testCategory || "-"}
+                  </TableCell>
+                  <TableCell className="text-slate-600 font-medium">
+                    {getTopicName(test.topic)}
                   </TableCell>
                   <TableCell className="text-slate-500">{test.durationMins} mins</TableCell>
                   <TableCell className="text-slate-500">
@@ -230,6 +253,46 @@ export default function AdminTestsPage() {
             )}
           </TableBody>
         </Table>
+        <div className="flex items-center justify-between mt-6 border-t border-slate-100 pt-4 pb-2 px-2">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-500">Rows per page:</span>
+            <select
+              value={limit}
+              onChange={(e) => {
+                setLimit(Number(e.target.value));
+                setPage(1);
+              }}
+              className="text-xs border border-slate-200 rounded px-2 py-1 outline-none bg-white text-slate-700"
+            >
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+          </div>
+          <span className="text-xs text-slate-500">
+            Showing {tests.length} of {data?.totalResult || 0} tests
+          </span>
+          <div className="flex items-center gap-2">
+            <button 
+              disabled={page === 1}
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              className="px-3 py-1 border border-slate-200 rounded text-xs hover:bg-slate-50 disabled:opacity-50 font-medium text-slate-600"
+            >
+              Previous
+            </button>
+            <span className="text-xs font-medium text-slate-700">
+              Page {page} of {data?.totalPage || 1}
+            </span>
+            <button 
+              disabled={page === (data?.totalPage || 1)}
+              onClick={() => setPage(p => p + 1)}
+              className="px-3 py-1 border border-slate-200 rounded text-xs hover:bg-slate-50 disabled:opacity-50 font-medium text-slate-600"
+            >
+              Next
+            </button>
+          </div>
+        </div>
       </AdminTableContainer>
 
       <TestDialog 
@@ -238,6 +301,7 @@ export default function AdminTestsPage() {
         onSubmit={handleSave}
         isPending={saveMutation.isPending}
         editingTest={editingTest}
+        defaultMode="practice"
       />
     </div>
   );

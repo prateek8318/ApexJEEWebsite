@@ -1,12 +1,16 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Check, Flag, AlignJustify, Link2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Check, Flag, AlignJustify, Link2, Heart } from "lucide-react";
 
 interface LectureControlsProps {
   onPrev: () => void;
   onNext: () => void;
   onMarkWatched: () => void;
+  onFavourite?: () => void;
+  onFlag?: () => void;
   isWatched: boolean;
+  isFavourite?: boolean;
+  isFlagged?: boolean;
   lectureNumber: number;
   lectureTitle: string;
   duration: string;
@@ -16,7 +20,11 @@ export default function LectureControls({
   onPrev,
   onNext,
   onMarkWatched,
+  onFavourite,
+  onFlag,
   isWatched,
+  isFavourite,
+  isFlagged,
   lectureNumber,
   lectureTitle,
   duration,
@@ -42,9 +50,9 @@ export default function LectureControls({
           <Check size={14} strokeWidth={2.5} />
           {isWatched ? "Watched" : "Mark as Watched"}
         </button>
-        <button className="flag-btn">
-          <Flag size={15} fill="#ef4444" color="#ef4444" />
-          Flag Video
+        <button className="flag-btn" onClick={onFlag}>
+          <Flag size={15} fill={isFlagged ? "#ef4444" : "none"} color="#ef4444" />
+          {isFlagged ? "Flagged" : "Flag Video"}
         </button>
       </div>
 
@@ -54,7 +62,12 @@ export default function LectureControls({
           <span className="lecture-num">{lectureNumber}.</span>
           <h2 className="lecture-title">{lectureTitle}</h2>
           <div className="meta-actions">
-            <button className="meta-btn"><Flag size={14} color="#ef4444" fill="#ef4444" /></button>
+            <button className="meta-btn" onClick={onFavourite}>
+              <Heart size={14} color={isFavourite ? "#ec4899" : "#888"} fill={isFavourite ? "#ec4899" : "none"} />
+            </button>
+            <button className="meta-btn" onClick={onFlag}>
+              <Flag size={14} color={isFlagged ? "#ef4444" : "#888"} fill={isFlagged ? "#ef4444" : "none"} />
+            </button>
             <button className="meta-btn"><AlignJustify size={14} /></button>
             <button className="meta-btn"><Link2 size={14} /></button>
           </div>

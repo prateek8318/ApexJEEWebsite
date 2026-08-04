@@ -29,6 +29,8 @@ import RejectDialog from "@/components/admin/reject-dialog";
 
 export default function AdminApprovalsPage() {
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
   const [statusFilter, setStatusFilter] = useState("pending");
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [selectedAdmin, setSelectedAdmin] = useState<Admin | null>(null);
@@ -36,9 +38,11 @@ export default function AdminApprovalsPage() {
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
-    queryKey: ["admin-approvals", search, statusFilter],
+    queryKey: ["admin-approvals", search, statusFilter, page, limit],
     queryFn: () => approvalApi.getPendingAdmins({ 
-      search, 
+      search,
+      page,
+      limit,
       ...(statusFilter !== "all" && { approvalStatus: statusFilter })
     }),
   });
@@ -110,10 +114,10 @@ export default function AdminApprovalsPage() {
       <AdminTableContainer 
         searchPlaceholder="Search admins by name, email, or mobile..."
         searchValue={search}
-        onSearchChange={setSearch}
-        colorTheme="violet"
+        onSearchChange={(val) => { setSearch(val); setPage(1); }}
+        colorTheme="emerald"
         actionRight={
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <Select value={statusFilter} onValueChange={(val) => { setStatusFilter(val); setPage(1); }}>
             <SelectTrigger className="w-[160px] h-11 bg-white border-slate-200">
               <SelectValue placeholder="All Status" />
             </SelectTrigger>
@@ -220,6 +224,46 @@ export default function AdminApprovalsPage() {
             )}
           </TableBody>
         </Table>
+        <div className="flex items-center justify-between mt-6 border-t border-slate-100 pt-4 pb-2 px-2">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-500">Rows per page:</span>
+            <select
+              value={limit}
+              onChange={(e) => {
+                setLimit(Number(e.target.value));
+                setPage(1);
+              }}
+              className="text-xs border border-slate-200 rounded px-2 py-1 outline-none bg-white text-slate-700"
+            >
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+          </div>
+          <span className="text-xs text-slate-500">
+            Showing {admins.length} of {data?.totalResult || 0} admins
+          </span>
+          <div className="flex items-center gap-2">
+            <button 
+              disabled={page === 1}
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              className="px-3 py-1 border border-slate-200 rounded text-xs hover:bg-slate-50 disabled:opacity-50 font-medium text-slate-600"
+            >
+              Previous
+            </button>
+            <span className="text-xs font-medium text-slate-700">
+              Page {page} of {data?.totalPage || 1}
+            </span>
+            <button 
+              disabled={page === (data?.totalPage || 1)}
+              onClick={() => setPage(p => p + 1)}
+              className="px-3 py-1 border border-slate-200 rounded text-xs hover:bg-slate-50 disabled:opacity-50 font-medium text-slate-600"
+            >
+              Next
+            </button>
+          </div>
+        </div>
       </AdminTableContainer>
 
       <RejectDialog 

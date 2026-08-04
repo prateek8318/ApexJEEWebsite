@@ -82,6 +82,7 @@ export interface Video {
   description?: string;
   youtubeUrl: string;
   thumbnailUrl?: string;
+  noteUrl?: string;
   durationMinutes: number;
   difficulty: "easy" | "medium" | "hard";
   examTag?: string;
@@ -128,6 +129,10 @@ export interface ApiResponse<T = any> {
   message?: string;
   data?: T;
   results?: number;
+  totalResult?: number;
+  totalPage?: number;
+  limit?: number;
+  page?: number;
 }
 
 export interface Test {
@@ -136,6 +141,7 @@ export interface Test {
   examTag?: string;
   mode?: string;
   testCategory?: string;
+  topic?: string | any;
   instructions?: any;
   negativeMarking: boolean;
   durationMins: number;

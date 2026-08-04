@@ -1,12 +1,18 @@
 import { adminClient } from './client';
 
 export const approvalApi = {
-  getPendingAdmins: (params?: { page?: number; limit?: number; search?: string; approvalStatus?: string }) => 
-    adminClient.get('/pendingAdmin', { params }),
+  getPendingAdmins: async (params?: { page?: number; limit?: number; search?: string; approvalStatus?: string }) => {
+    const response = await adminClient.get('/pendingAdmin', { params });
+    return response.data;
+  },
 
-  approveAdmin: (id: string) => 
-    adminClient.patch(`/${id}/approve`),
+  approveAdmin: async (id: string) => {
+    const response = await adminClient.patch(`/${id}/approve`);
+    return response.data;
+  },
 
-  rejectAdmin: (id: string, reason: string) => 
-    adminClient.patch(`/${id}/reject`, { reason }),
+  rejectAdmin: async (id: string, reason: string) => {
+    const response = await adminClient.patch(`/${id}/reject`, { reason });
+    return response.data;
+  },
 };

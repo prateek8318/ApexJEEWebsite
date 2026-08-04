@@ -1,18 +1,22 @@
 "use client";
 
 import React, { useState } from "react";
-import { Pencil, Search, Download } from "lucide-react";
+import { Pencil, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { questionsApi } from "@/lib/api/admin/questions";
 import { subjectsApi } from "@/lib/api/admin/subjects";
 import { chaptersApi } from "@/lib/api/admin/chapters";
 import { topicsApi } from "@/lib/api/admin/topics";
+import { testsApi } from "@/lib/api/admin/tests";
 import { toast } from "sonner";
-import { Question as QuestionType, Subject, Chapter } from "@/types/admin-api";
+import { Question as QuestionType, Subject, Chapter, Test } from "@/types/admin-api";
+import TestDialog from "@/components/admin/test-dialog";
 
 export function PracticeTab() {
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
   
   // Form States
   const [subject, setSubject] = useState("");
@@ -33,12 +37,18 @@ export function PracticeTab() {
   const [solution, setSolution] = useState("");
   
   // New source fields
-  const [sourceType, setSourceType] = useState("practice");
+  const [sourceType] = useState("practice");
   const [sourceExam, setSourceExam] = useState("");
   const [sourceYear, setSourceYear] = useState(new Date().getFullYear().toString());
   const [sourceShift, setSourceShift] = useState("1");
   const [sourceInstitute, setSourceInstitute] = useState("");
   const [isActive, setIsActive] = useState(true);
+
+  // Test Mapping States
+  const [selectedTestId, setSelectedTestId] = useState("");
+  const [isTestDialogOpen, setIsTestDialogOpen] = useState(false);
+  const [uploadMode, setUploadMode] = useState<"single" | "bulk">("single");
+  const [bulkFile, setBulkFile] = useState<File | null>(null);
 
   // Files
   const [questionImage, setQuestionImage] = useState<File | null>(null);
@@ -47,13 +57,56 @@ export function PracticeTab() {
   const queryClient = useQueryClient();
 
   const { data: questionsData, isLoading: isLoadingQuestions } = useQuery({
-    queryKey: ["admin-questions", search],
-    queryFn: () => questionsApi.getAllQuestions({ search }),
+    queryKey: ["admin-questions", search, "practice", page, limit],
+    queryFn: () => questionsApi.getAllQuestions({ search, sourceType: "practice", page, limit }),
+  });
+
+  const { data: testsDataResponse } = useQuery({
+    queryKey: ["admin-tests", "practice"],
+    queryFn: () => testsApi.getAllTests({ search: "", mode: "practice", limit: 100 }),
+  });
+  const availableTests = testsDataResponse?.data || [];
+
+  const createTestMutation = useMutation({
+    mutationFn: (data: Partial<Test>) => testsApi.createTest(data),
+    onSuccess: (res) => {
+      toast.success("Practice Test created successfully!");
+      queryClient.invalidateQueries({ queryKey: ["admin-tests", "practice"] });
+      setIsTestDialogOpen(false);
+      if (res.data?._id) {
+        setSelectedTestId(res.data._id);
+      }
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || "Failed to create practice test");
+    },
+  });
+
+  const addQuestionsToTestMutation = useMutation({
+    mutationFn: ({ testId, qId }: { testId: string; qId: string }) => 
+      testsApi.addQuestions(testId, { questions: [{ question: qId }] }),
+    onSuccess: () => {
+      toast.success("Question mapped to test successfully!");
+      queryClient.invalidateQueries({ queryKey: ["admin-tests"] });
+    },
+  });
+
+  const bulkUploadMutation = useMutation({
+    mutationFn: (formData: FormData) => testsApi.uploadWordQuestions(formData),
+    onSuccess: (res: any) => {
+      toast.success(res.message || "Bulk upload successful!");
+      queryClient.invalidateQueries({ queryKey: ["admin-questions"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-tests"] });
+      setBulkFile(null);
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || "Failed to bulk upload questions");
+    },
   });
 
   const { data: subjectsData } = useQuery({
     queryKey: ["admin-subjects"],
-    queryFn: () => subjectsApi.getAllSubjects(""),
+    queryFn: () => subjectsApi.getAllSubjects({}),
   });
 
   const { data: chaptersData } = useQuery({
@@ -116,12 +169,7 @@ export function PracticeTab() {
     if (questionType === "integer") {
       formData.append("integerAnswer", integerAnswer);
     } else {
-      const options = [
-        { text: optionA, isCorrect: correctAnswer === "A" },
-        { text: optionB, isCorrect: correctAnswer === "B" },
-        { text: optionC, isCorrect: correctAnswer === "C" },
-        { text: optionD, isCorrect: correctAnswer === "D" }
-      ];
+      const options = [optionA, optionB, optionC, optionD];
       formData.append("options", JSON.stringify(options));
       
       const answers = [];
@@ -163,12 +211,38 @@ export function PracticeTab() {
             <div className="w-10 h-10 rounded-xl bg-orange-50 text-orange-500 flex items-center justify-center">
               <Pencil size={20} />
             </div>
-            <h2 className="text-lg font-bold text-slate-800">Add Practice Question</h2>
+            <h2 className="text-lg font-bold text-slate-800">Add Practice Questions</h2>
           </div>
-          <button className="px-4 py-2 border border-slate-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 flex items-center gap-2">
-            <Download size={16} /> Bulk CSV Import
-          </button>
         </div>
+
+        {/* --- TEST MAPPING SECTION --- */}
+        <div className="mb-8 p-5 bg-slate-50 border border-slate-200 rounded-xl space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-bold text-slate-800">Map to Test <span className="text-red-500">*</span></h3>
+              <p className="text-[11px] text-slate-500 mt-0.5">Select a Practice Test to add questions to.</p>
+            </div>
+            <button onClick={() => setIsTestDialogOpen(true)} className="px-4 py-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 font-bold text-xs rounded-lg transition-colors border border-indigo-100">
+              + Create New Test
+            </button>
+          </div>
+          <select value={selectedTestId} onChange={(e) => setSelectedTestId(e.target.value)} className="w-full px-4 py-2.5 rounded-lg border border-slate-200 text-sm focus:border-blue-500 outline-none appearance-none bg-white font-medium text-slate-700">
+            <option value="">-- Select a Test --</option>
+            {availableTests.map((t: any) => (
+              <option key={t._id} value={t._id}>{t.title} {t.examTag ? `(${t.examTag})` : ''}</option>
+            ))}
+          </select>
+        </div>
+
+        {selectedTestId ? (
+          <>
+            {/* TABS */}
+            <div className="flex items-center gap-2 mb-6 border-b border-slate-200 pb-px">
+              <button onClick={() => setUploadMode("single")} className={cn("px-5 py-2.5 text-sm font-bold border-b-2 transition-colors", uploadMode === "single" ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-700")}>Add Single Question</button>
+              <button onClick={() => setUploadMode("bulk")} className={cn("px-5 py-2.5 text-sm font-bold border-b-2 transition-colors", uploadMode === "bulk" ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-700")}>Bulk Upload (Word doc)</button>
+            </div>
+
+            {uploadMode === "single" ? (
 
         <form onSubmit={handleSaveQuestion} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -318,11 +392,8 @@ export function PracticeTab() {
             </div>
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-slate-600">Type</label>
-              <select value={sourceType} onChange={(e) => setSourceType(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs text-slate-700 focus:border-blue-500 outline-none">
-                <option value="pyq">PYQ</option>
+              <select value={sourceType} disabled className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs text-slate-500 bg-slate-50 outline-none">
                 <option value="practice">Practice</option>
-                <option value="mock">Mock</option>
-                <option value="all">All</option>
               </select>
             </div>
             <div className="space-y-1">
@@ -347,19 +418,62 @@ export function PracticeTab() {
             <button type="button" onClick={() => { setQuestionText(""); setOptionA(""); setOptionB(""); setOptionC(""); setOptionD(""); setSolution(""); setQuestionImage(null); setExplanationFiles(null); }} className="px-6 py-2.5 bg-white border border-slate-200 text-slate-600 font-bold text-sm rounded-lg hover:bg-slate-50">
               Clear Form
             </button>
-            <button type="submit" disabled={createMutation.isPending} className="px-6 py-2.5 bg-[#F5A623] text-white font-bold text-sm rounded-lg hover:bg-orange-500 shadow-md disabled:opacity-50">
-              {createMutation.isPending ? "Saving..." : "Save Question"}
+            <button type="submit" disabled={createMutation.isPending || addQuestionsToTestMutation.isPending} className="px-6 py-2.5 bg-[#F5A623] text-white font-bold text-sm rounded-lg hover:bg-orange-500 shadow-md disabled:opacity-50">
+              {createMutation.isPending || addQuestionsToTestMutation.isPending ? "Saving..." : "Save Question"}
             </button>
           </div>
         </form>
+        ) : (
+          <div className="p-8 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50/50 flex flex-col items-center justify-center space-y-4">
+            <div className="text-center space-y-1">
+              <h4 className="text-sm font-bold text-slate-800">Upload Word Document</h4>
+              <p className="text-[11px] text-slate-500 max-w-sm mx-auto">Upload a .docx file formatted correctly. The parser will automatically extract questions, options, answers, and metadata.</p>
+            </div>
+            <input 
+              type="file" 
+              accept=".docx"
+              onChange={(e) => setBulkFile(e.target.files?.[0] || null)}
+              className="max-w-xs text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+            />
+            <button 
+              onClick={() => {
+                if (!bulkFile) return toast.error("Please select a file first");
+                const fd = new FormData();
+                fd.append("wordFile", bulkFile);
+                fd.append("testId", selectedTestId);
+                bulkUploadMutation.mutate(fd);
+              }}
+              disabled={!bulkFile || bulkUploadMutation.isPending}
+              className="px-6 py-2.5 bg-[#4F46E5] text-white font-bold text-sm rounded-lg hover:bg-indigo-600 disabled:opacity-50 mt-4"
+            >
+              {bulkUploadMutation.isPending ? "Uploading..." : "Upload & Map Questions"}
+            </button>
+          </div>
+        )}
+      </>
+      ) : (
+        <div className="py-12 text-center border border-slate-100 rounded-xl bg-slate-50 text-slate-500 text-sm">
+          Please select or create a Practice Test to start adding questions.
+        </div>
+      )}
       </div>
+      
+      <TestDialog 
+        isOpen={isTestDialogOpen}
+        onOpenChange={setIsTestDialogOpen}
+        onSubmit={(values) => {
+          createTestMutation.mutate({ ...values, mode: "practice" });
+        }}
+        isPending={createTestMutation.isPending}
+        defaultMode="practice"
+      />
 
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 mt-6">
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-bold text-slate-800">Added Questions</h3>
+          <h3 className="text-lg font-bold text-slate-800">All Practice Questions (Bank)</h3>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-            <input value={search} onChange={(e) => setSearch(e.target.value)} type="text" placeholder="Search questions..." className="pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-500 w-64 bg-slate-50/50" />
+            <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} type="text" placeholder="Search questions..." className="pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-500 w-64 bg-slate-50/50" />
           </div>
         </div>
         <div className="overflow-x-auto">
@@ -413,6 +527,46 @@ export function PracticeTab() {
               )}
             </tbody>
           </table>
+        </div>
+        <div className="flex items-center justify-between mt-4 border-t border-slate-100 pt-4">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-500">Rows per page:</span>
+            <select
+              value={limit}
+              onChange={(e) => {
+                setLimit(Number(e.target.value));
+                setPage(1);
+              }}
+              className="text-xs border border-slate-200 rounded px-2 py-1 outline-none bg-white text-slate-700"
+            >
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+          </div>
+          <span className="text-xs text-slate-500">
+            Showing {questionsList.length} of {questionsData?.totalResult  || 0} questions
+          </span>
+          <div className="flex items-center gap-2">
+            <button 
+              disabled={page === 1}
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              className="px-3 py-1 border border-slate-200 rounded text-xs hover:bg-slate-50 disabled:opacity-50 font-medium text-slate-600"
+            >
+              Previous
+            </button>
+            <span className="text-xs font-medium text-slate-700">
+              Page {page} of {questionsData?.totalPage  || 1}
+            </span>
+            <button 
+              disabled={page === (questionsData?.totalPage  || 1)}
+              onClick={() => setPage(p => p + 1)}
+              className="px-3 py-1 border border-slate-200 rounded text-xs hover:bg-slate-50 disabled:opacity-50 font-medium text-slate-600"
+            >
+              Next
+            </button>
+          </div>
         </div>
       </div>
     </>

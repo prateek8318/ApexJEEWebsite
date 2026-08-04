@@ -7,10 +7,7 @@ export const plansApi = {
     return response.data;
   },
 
-  getAllPlans: async (search?: string, planType?: string): Promise<ApiResponse<SubscriptionPlan[]>> => {
-    const params: any = {};
-    if (search) params.search = search;
-    if (planType) params.planType = planType;
+  getAllPlans: async (params?: Record<string, any>): Promise<ApiResponse<SubscriptionPlan[]>> => {
     const response = await adminClient.get('/plans', { params });
     return response.data;
   },

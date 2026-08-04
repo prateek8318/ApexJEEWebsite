@@ -1,111 +1,134 @@
 "use client";
 
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, BookOpen } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface TopNavProps {
-  currentSubject: string;
-  currentChapter: string;
+  subjects: any[];
+  chapters: any[];
+  topics: any[];
+  currentSubjectId: string;
+  currentChapterId: string;
+  currentTopicId: string;
+  onSubjectChange: (id: string) => void;
+  onChapterChange: (id: string) => void;
+  onTopicChange: (id: string) => void;
   progress: number;
   watched: number;
   total: number;
 }
 
 export default function TopNav({
-  currentSubject,
-  currentChapter,
+  subjects,
+  chapters,
+  topics,
+  currentSubjectId,
+  currentChapterId,
+  currentTopicId,
+  onSubjectChange,
+  onChapterChange,
+  onTopicChange,
   progress,
   watched,
   total,
 }: TopNavProps) {
+  const currentSubject = subjects?.find((s) => s._id === currentSubjectId);
+  const currentChapter = chapters?.find((c) => c._id === currentChapterId);
+  const currentTopic = topics?.find((t) => t._id === currentTopicId);
+
   return (
-    <div className="top-nav">
-      <div className="nav-left">
-        <div className="subject-tab active">
-          <span className="subject-icon">⚡</span>
-          <span>{currentSubject}</span>
-          <ChevronDown size={14} />
-        </div>
-        <div className="subject-tab">
-          <span className="subject-icon math">✳</span>
-          <span>{currentChapter}</span>
-          <ChevronDown size={14} />
-        </div>
+    <div className="top-nav relative z-10 flex items-center justify-between bg-[#13151f] border-b border-[#2a2d3d] px-6 h-14 w-full text-white">
+      <div className="flex items-center gap-3">
+        <span className="text-sm text-gray-400 mr-2 font-medium">JUMP TO:</span>
+        
+        {/* Subject Dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#1e2130] border border-[#2a2d3d] text-sm cursor-pointer hover:bg-[#25293d] transition-colors">
+              <span className="text-blue-400">⚡</span>
+              <span className="font-medium text-gray-200 truncate max-w-[120px]">{currentSubject?.name || "Subject"}</span>
+              <ChevronDown size={14} className="text-gray-400" />
+            </div>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="bg-[#1e2130] border-[#2a2d3d] text-gray-200">
+            {subjects?.map((subject) => (
+              <DropdownMenuItem
+                key={subject._id}
+                className="hover:bg-[#2a2d3d] cursor-pointer"
+                onClick={() => onSubjectChange(subject._id)}
+              >
+                {subject.name}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <span className="text-gray-500">›</span>
+
+        {/* Chapter Dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#1e2130] border border-[#2a2d3d] text-sm cursor-pointer hover:bg-[#25293d] transition-colors">
+              <span className="text-green-400">✳</span>
+              <span className="font-medium text-gray-200 truncate max-w-[150px]">{currentChapter?.title || "Chapter"}</span>
+              <ChevronDown size={14} className="text-gray-400" />
+            </div>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="bg-[#1e2130] border-[#2a2d3d] text-gray-200 max-w-[300px]">
+            {chapters?.map((chapter) => (
+              <DropdownMenuItem
+                key={chapter._id}
+                className="hover:bg-[#2a2d3d] cursor-pointer truncate"
+                onClick={() => onChapterChange(chapter._id)}
+              >
+                {chapter.title}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <span className="text-gray-500">›</span>
+
+        {/* Topic Dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#1e2130] border border-[#2a2d3d] text-sm cursor-pointer hover:bg-[#25293d] transition-colors">
+              <BookOpen size={14} className="text-pink-400" />
+              <span className="font-medium text-gray-200 truncate max-w-[150px]">{currentTopic?.title || "Topic"}</span>
+              <ChevronDown size={14} className="text-gray-400" />
+            </div>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="bg-[#1e2130] border-[#2a2d3d] text-gray-200 max-w-[300px]">
+            {topics?.map((topic) => (
+              <DropdownMenuItem
+                key={topic._id}
+                className="hover:bg-[#2a2d3d] cursor-pointer truncate"
+                onClick={() => onTopicChange(topic._id)}
+              >
+                {topic.title}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+
       </div>
-      <div className="nav-right">
-        <span className="progress-text">
-          {watched} / {total} watched
+      
+      <div className="flex items-center gap-4">
+        <span className="text-xs font-medium text-gray-400 tracking-wide">
+          <span className="text-white">{watched}</span> / {total} WATCHED
         </span>
-        <div className="progress-bar-track">
+        <div className="w-[140px] h-2 bg-[#25293d] rounded-full overflow-hidden shadow-inner">
           <div
-            className="progress-bar-fill"
+            className="h-full bg-gradient-to-r from-blue-500 to-cyan-400 rounded-full transition-all duration-500 ease-out"
             style={{ width: `${progress}%` }}
           />
         </div>
       </div>
-
-      <style jsx>{`
-        .top-nav {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          background: #1a1a2e;
-          padding: 0 16px;
-          height: 44px;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-        }
-        .nav-left {
-          display: flex;
-          gap: 8px;
-        }
-        .subject-tab {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          padding: 6px 12px;
-          border-radius: 20px;
-          font-size: 13px;
-          color: #aaa;
-          cursor: pointer;
-          border: 1px solid transparent;
-          transition: all 0.2s;
-        }
-        .subject-tab.active {
-          background: rgba(99, 102, 241, 0.15);
-          border-color: rgba(99, 102, 241, 0.4);
-          color: #a5b4fc;
-        }
-        .subject-tab:hover {
-          background: rgba(255, 255, 255, 0.06);
-        }
-        .subject-icon {
-          font-size: 12px;
-        }
-        .subject-icon.math {
-          color: #60a5fa;
-        }
-        .nav-right {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-        }
-        .progress-text {
-          font-size: 12px;
-          color: #888;
-        }
-        .progress-bar-track {
-          width: 120px;
-          height: 5px;
-          background: rgba(255, 255, 255, 0.1);
-          border-radius: 999px;
-          overflow: hidden;
-        }
-        .progress-bar-fill {
-          height: 100%;
-          background: linear-gradient(90deg, #f59e0b, #fbbf24);
-          border-radius: 999px;
-          transition: width 0.4s ease;
-        }
-      `}</style>
     </div>
   );
 }

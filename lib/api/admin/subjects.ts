@@ -11,8 +11,7 @@ export const subjectsApi = {
     return response.data;
   },
 
-  getAllSubjects: async (search?: string): Promise<ApiResponse<Subject[]>> => {
-    const params = search ? { search } : {};
+  getAllSubjects: async (params?: Record<string, any>): Promise<ApiResponse<Subject[]>> => {
     const response = await adminClient.get('/subjects', { params });
     return response.data;
   },

@@ -13,6 +13,8 @@ import { Note as NoteType, Subject, Chapter } from "@/types/admin-api";
 
 export function NotesTab() {
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
   
   // Form States
   const [title, setTitle] = useState("");
@@ -29,13 +31,13 @@ export function NotesTab() {
   const queryClient = useQueryClient();
 
   const { data: notesData, isLoading: isLoadingNotes } = useQuery({
-    queryKey: ["admin-notes", search],
-    queryFn: () => notesApi.getAllNotes({ search }),
+    queryKey: ["admin-notes", search, page, limit],
+    queryFn: () => notesApi.getAllNotes({ search, page, limit }),
   });
 
   const { data: subjectsData } = useQuery({
     queryKey: ["admin-subjects"],
-    queryFn: () => subjectsApi.getAllSubjects(""),
+    queryFn: () => subjectsApi.getAllSubjects({}),
   });
 
   const { data: chaptersData } = useQuery({
@@ -223,7 +225,7 @@ export function NotesTab() {
           <h3 className="text-lg font-bold text-slate-800">Uploaded Notes</h3>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-            <input value={search} onChange={(e) => setSearch(e.target.value)} type="text" placeholder="Search notes..." className="pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-500 w-64 bg-slate-50/50" />
+            <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} type="text" placeholder="Search notes..." className="pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-500 w-64 bg-slate-50/50" />
           </div>
         </div>
         <div className="overflow-x-auto">
@@ -270,6 +272,46 @@ export function NotesTab() {
               )}
             </tbody>
           </table>
+        </div>
+        <div className="flex items-center justify-between mt-4 border-t border-slate-100 pt-4">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-500">Rows per page:</span>
+            <select
+              value={limit}
+              onChange={(e) => {
+                setLimit(Number(e.target.value));
+                setPage(1);
+              }}
+              className="text-xs border border-slate-200 rounded px-2 py-1 outline-none bg-white text-slate-700"
+            >
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+          </div>
+          <span className="text-xs text-slate-500">
+            Showing {notesList.length} of {notesData?.totalResult  || 0} notes
+          </span>
+          <div className="flex items-center gap-2">
+            <button 
+              disabled={page === 1}
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              className="px-3 py-1 border border-slate-200 rounded text-xs hover:bg-slate-50 disabled:opacity-50 font-medium text-slate-600"
+            >
+              Previous
+            </button>
+            <span className="text-xs font-medium text-slate-700">
+              Page {page} of {notesData?.totalPage  || 1}
+            </span>
+            <button 
+              disabled={page === (notesData?.totalPage  || 1)}
+              onClick={() => setPage(p => p + 1)}
+              className="px-3 py-1 border border-slate-200 rounded text-xs hover:bg-slate-50 disabled:opacity-50 font-medium text-slate-600"
+            >
+              Next
+            </button>
+          </div>
         </div>
       </div>
     </>
