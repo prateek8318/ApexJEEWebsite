@@ -109,7 +109,6 @@ function VideoLectureContent() {
     if (lecture?._id) {
       incrementWatchCountMutation.mutate(lecture._id);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lecture?._id]);
 
   if (!topicId) {

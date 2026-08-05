@@ -30,8 +30,8 @@ export const QuestionPagination = ({ total, current, statusMap, onChange }: Prop
           onClick={() => onChange(n)}
           className={cn(
             "flex size-7 items-center justify-center rounded-md border text-[11px] font-bold transition-all",
-            btnStyle[status],
-            n === current && "ring-2 ring-blue-400 ring-offset-1",
+            n === current && status === "untouched" ? btnStyle["current"] : btnStyle[status],
+            n === current && status !== "untouched" && "ring-2 ring-blue-500 ring-offset-2",
           )}
         >
           {n}

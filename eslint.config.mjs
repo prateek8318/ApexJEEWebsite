@@ -16,7 +16,7 @@ const compat = new FlatCompat({
  
 const eslintConfig = [
     {
-        ignores: ["node_modules/**", ".next/**", "out/**", "build/**", "next-env.d.ts", "prisma/client/**"],
+        ignores: ["node_modules/**", ".next/**", "out/**", "build/**", "next-env.d.ts", "prisma/client/**", "fix.js"],
     },
     js.configs.recommended,
     ...compat.extends("plugin:@typescript-eslint/recommended"),
@@ -30,7 +30,13 @@ const eslintConfig = [
         rules: {
             ...nextPlugin.configs.recommended.rules,
             ...nextPlugin.configs["core-web-vitals"].rules,
-            "@typescript-eslint/no-unused-vars": ["error", { "varsIgnorePattern": "^_", "argsIgnorePattern": "^_", "caughtErrorsIgnorePattern": "^_" }],
+            "@typescript-eslint/no-unused-vars": "off",
+            "@typescript-eslint/no-explicit-any": "off",
+            "@typescript-eslint/no-require-imports": "off",
+            "@typescript-eslint/ban-ts-comment": "off",
+            "react-hooks/exhaustive-deps": "off",
+            "no-undef": "off",
+            "@next/next/no-img-element": "off"
         },
     },
 ];

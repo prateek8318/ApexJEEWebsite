@@ -1,11 +1,10 @@
 "use client";
 
-import React, { useState, use } from "react";
+import { use } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { userTestAttemptApi } from "@/lib/api/user/test-attempt";
 import { ChevronLeft, CheckCircle2, XCircle, AlertCircle, Clock } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
 
 export default function PracticeReviewPage({ params }: { params: Promise<{ attemptId: string }> }) {
   const router = useRouter();

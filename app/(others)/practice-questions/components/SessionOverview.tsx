@@ -97,7 +97,7 @@ export const SessionOverview = ({ total, currentQ, statusMap, onSelectQ }: Props
   const correct   = Object.values(statusMap).filter((s) => s === "correct").length;
   const wrong     = Object.values(statusMap).filter((s) => s === "wrong").length;
   const skipped   = Object.values(statusMap).filter((s) => s === "skipped").length;
-  const remaining = total - correct - wrong - skipped - 1;
+  const remaining = total - correct - wrong - skipped;
 
   const stats = [
     { label: "Correct",   value: correct,            color: "bg-green-500" },

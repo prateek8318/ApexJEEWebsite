@@ -102,7 +102,7 @@ export default function Page() {
   }, [chapters, activeChapterId]);
 
   const [currentQ, setCurrentQ]             = useState(1);
-  const [selected, setSelected]             = useState<string | null>(null);
+  const [selected, setSelected]             = useState<number | null>(null);
   const [showSolution, setShowSolution]     = useState(false);
   const [statusMap, setStatusMap]           = useState<Record<number, QuestionStatus>>({
     1: "current",
@@ -124,8 +124,8 @@ export default function Page() {
   };
 
   const handleSubmit = () => {
-    if (!selected) return;
-    const isCorrect = selected === question.correctAnswer;
+    if (selected === null) return;
+    const isCorrect = selected === (question.correctAnswer.charCodeAt(0) - 65);
     setStatusMap((prev) => ({ ...prev, [currentQ]: isCorrect ? "correct" : "wrong" }));
     setShowSolution(true);
   };
@@ -181,11 +181,14 @@ export default function Page() {
 
             <QuestionBody
               body={question.body}
-              options={question.options}
-              selected={selected}
-              onSelect={setSelected}
+              options={question.options.map((opt, i) => ({ index: i, label: opt.key, text: opt.text }))}
+              selectedOptions={selected !== null ? [selected] : []}
+              integerAnswer=""
+              onSelectOption={(idx) => setSelected(idx)}
+              onSelectInteger={() => {}}
               showAnswer={showSolution}
-              correctAnswer={question.correctAnswer}
+              correctOptions={[question.correctAnswer.charCodeAt(0) - 65]}
+              type="single"
             />
 
             <QuestionActionBar

@@ -12,8 +12,8 @@ export const userTestAttemptApi = {
     questionId: string,
     data: {
       action?: "answer" | "skip" | "know_and_skip" | "mark_review" | "clear";
-      selectedOptions?: string[];
-      integerAnswerGiven?: number | null;
+      selectedOptions?: number[];
+      integerAnswerGiven?: string | number | null;
       timeSpent?: number;
       markedForReview?: boolean;
     }

@@ -93,13 +93,35 @@ export default function Page() {
       setAttemptId(res.data.attemptId);
       if (res.data.palette) {
         setInitialPalette(res.data.palette);
+        
+        // The backend now returns selectedOptions and integerAnswerGiven inside the palette array
+        const initialResponses: Record<string, any> = {};
+        res.data.palette.forEach((p: any) => {
+          if (p.status !== "untouched") {
+            initialResponses[p.questionId] = {
+              question: p.questionId,
+              selectedOptions: p.selectedOptions || [],
+              integerAnswerGiven: p.integerAnswerGiven,
+              correctOptions: p.correctOptions,
+              correctInteger: p.correctInteger
+            };
+          }
+        });
+        setUserResponses(initialResponses);
+      } else {
+        setUserResponses({});
       }
     }
   });
 
   const submitAttemptMutation = useMutation({
     mutationFn: (payload: { attemptId: string, data?: any }) => userTestAttemptApi.submitPracticeAttempt(payload.attemptId, payload.data),
-    onSuccess: () => {
+    onSuccess: (res: any) => {
+      // Prevent routing if it was a duplicate fast-response due to race condition
+      if (res?.data?.message?.includes("in progress")) {
+        return;
+      }
+      
       // Instead of an alert and resetting, redirect to the review page
       if (attemptId) {
         router.push(`/practice-questions/${attemptId}/review`);
@@ -192,13 +214,34 @@ export default function Page() {
       // Find first untouched to set as current
       const untouchedKeys = Object.keys(newMap).filter(k => newMap[Number(k)] === "untouched");
       const current = untouchedKeys.length > 0 ? Number(untouchedKeys[0]) : 1;
-      newMap[current] = "current";
+      // Removed newMap[current] = "current" so we don't overwrite answered status
 
       setStatusMap(newMap);
       setCurrentQ(current);
-      setSelectedOptions([]);
-      setIntegerAnswer("");
-      setShowSolution(false);
+      
+      // We must access userResponses from a stable reference, but it's guaranteed to be populated
+      // immediately after startAttemptMutation. We can use setState callback to access it.
+      setUserResponses((prevResponses) => {
+        const qId = questions[current - 1]?.question?._id || questions[current - 1]?.question;
+        const prevAnswer = prevResponses[qId];
+        
+        if (prevAnswer) {
+          if (prevAnswer.selectedOptions) setSelectedOptions(prevAnswer.selectedOptions);
+          else setSelectedOptions([]);
+          
+          if (prevAnswer.integerAnswerGiven !== undefined && prevAnswer.integerAnswerGiven !== null) {
+            setIntegerAnswer(String(prevAnswer.integerAnswerGiven));
+          } else {
+            setIntegerAnswer("");
+          }
+          setShowSolution(true);
+        } else {
+          setSelectedOptions([]);
+          setIntegerAnswer("");
+          setShowSolution(false);
+        }
+        return prevResponses;
+      });
     }
   }, [questions.length, activeTestId, initialPalette]);
 
@@ -207,15 +250,12 @@ export default function Page() {
 
   const goTo = (n: number) => {
     if (n < 1 || n > TOTAL) return;
-    setStatusMap((prev) => ({
-      ...prev,
-      [currentQ]: prev[currentQ] === "current" ? "untouched" : prev[currentQ],
-      [n]: "current",
-    }));
+    // Removed buggy statusMap update that was erasing "correct"/"wrong" statuses
     setCurrentQ(n);
     
     // Restore selected state if previously answered
-    const prevAnswer = userResponses[questions[n - 1].question._id];
+    const qId = questions[n - 1].question?._id || questions[n - 1].question;
+    const prevAnswer = userResponses[qId];
     if (prevAnswer) {
       if (prevAnswer.selectedOptions) setSelectedOptions(prevAnswer.selectedOptions);
       else setSelectedOptions([]);
@@ -273,7 +313,9 @@ export default function Page() {
           [question._id]: {
             question: question._id,
             selectedOptions: selectedOptions,
-            integerAnswerGiven: question.questionType === "integer" ? Number(integerAnswer) : null
+            integerAnswerGiven: question.questionType === "integer" ? Number(integerAnswer) : null,
+            correctOptions: res.data?.correctOptions,
+            correctInteger: res.data?.correctInteger
           }
         }));
         
@@ -467,8 +509,8 @@ export default function Page() {
                     }}
                     onSelectInteger={setIntegerAnswer}
                     showAnswer={showSolution}
-                    correctOptions={question.answer || (question.options || []).map((o: any, i: number) => o.isCorrect ? i : -1).filter((i: number) => i !== -1)}
-                    correctInteger={question.integerAnswer?.toString()}
+                    correctOptions={userResponses[question._id]?.correctOptions || question.answer || (question.options || []).map((o: any, i: number) => o.isCorrect ? i : -1).filter((i: number) => i !== -1)}
+                    correctInteger={userResponses[question._id]?.correctInteger || question.integerAnswer?.toString()}
                     type={question.questionType}
                   />
                 )}

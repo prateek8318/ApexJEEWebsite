@@ -220,7 +220,6 @@ export default function SubjectDialog({
                         {previewUrl ? (
                           <div className="flex flex-col items-center gap-3 py-2">
                             <div className="relative w-20 h-20 rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-white flex items-center justify-center p-2">
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img src={previewUrl} alt="Icon preview" className="max-w-full max-h-full object-contain" />
                             </div>
                             <span className="text-base font-semibold text-slate-800">{fileName || 'Current Icon'}</span>
