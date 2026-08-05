@@ -1,10 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { userSubjectApi } from "@/lib/api/user/subject";
 import { userTopicApi } from "@/lib/api/user/topic";
 import { userTestApi } from "@/lib/api/user/test";
+import { userTestAttemptApi } from "@/lib/api/user/test-attempt";
+import { userFlagApi } from "@/lib/api/user/flag";
 import ChapterSidebar from "../study-materials/components/chapter-sidebar";
 import { QuestionPagination } from "./components/QuestionPagination";
 import { QuestionHeader } from "./components/QuestionHeader";
@@ -18,6 +21,7 @@ type QuestionStatus = "correct" | "wrong" | "skipped" | "current" | "untouched";
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function Page() {
+  const router = useRouter();
   const [activeSubjectId, setActiveSubjectId] = useState<string | null>(null);
   const [activeChapterId, setActiveChapterId] = useState<string | null>(null);
   const [activeTopicId, setActiveTopicId] = useState<string | null>(null);
@@ -27,7 +31,7 @@ export default function Page() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Fetch all active subjects
-  const { data: subjectsData, isLoading: isSubjectsLoading } = useQuery({
+  const { data: subjectsData } = useQuery({
     queryKey: ["subjects"],
     queryFn: () => userSubjectApi.getAllSubjects(),
   });
@@ -75,27 +79,81 @@ export default function Page() {
   });
   const practiceTests = testsData?.data || [];
 
+  const [currentQ, setCurrentQ] = useState(1);
+  const [selectedOptions, setSelectedOptions] = useState<number[]>([]);
+  const [integerAnswer, setIntegerAnswer] = useState<string>("");
+  const [showSolution, setShowSolution] = useState(false);
+  const [statusMap, setStatusMap] = useState<Record<number, QuestionStatus>>({});
+  const [initialPalette, setInitialPalette] = useState<any[] | null>(null);
+
   // Mutations
   const startAttemptMutation = useMutation({
-    mutationFn: (testId: string) => userTestApi.startTestAttempt(testId),
+    mutationFn: (testId: string) => userTestAttemptApi.startPracticeAttempt(testId),
     onSuccess: (res) => {
-      setAttemptId(res.data._id);
+      setAttemptId(res.data.attemptId);
+      if (res.data.palette) {
+        setInitialPalette(res.data.palette);
+      }
     }
   });
 
   const submitAttemptMutation = useMutation({
-    mutationFn: (payload: { attemptId: string, data: any }) => userTestApi.submitTestAttempt(payload.attemptId, payload.data),
+    mutationFn: (payload: { attemptId: string, data?: any }) => userTestAttemptApi.submitPracticeAttempt(payload.attemptId, payload.data),
     onSuccess: () => {
-      // Handle success (show score, go back to selection, etc)
-      setActiveTestId(null);
-      setAttemptId(null);
-      setUserResponses({});
+      // Instead of an alert and resetting, redirect to the review page
+      if (attemptId) {
+        router.push(`/practice-questions/${attemptId}/review`);
+      } else {
+        setActiveTestId(null);
+        setAttemptId(null);
+        setInitialPalette(null);
+        setUserResponses({});
+      }
+    },
+    onSettled: () => {
+      setIsSubmitting(false);
+    }
+  });
+
+  const queryClient = useQueryClient();
+  const toggleFlagMutation = useMutation({
+    mutationFn: (params: { questionId: string, isFlagged: boolean }) => 
+      params.isFlagged 
+        ? userFlagApi.unflagQuestion(params.questionId) 
+        : userFlagApi.flagQuestion(params.questionId),
+    onSuccess: (_, variables) => {
+      // Optimistically update the query cache so the flag button updates immediately
+      queryClient.setQueryData(["practice-test-questions", activeTestId], (oldData: any) => {
+        if (!oldData?.data) return oldData;
+        const newData = [...oldData.data];
+        const qIndex = newData.findIndex(q => q.question?._id === variables.questionId);
+        if (qIndex !== -1) {
+          newData[qIndex] = {
+            ...newData[qIndex],
+            question: {
+              ...newData[qIndex].question,
+              isFlagged: !variables.isFlagged
+            }
+          };
+        }
+        return { ...oldData, data: newData };
+      });
     }
   });
 
   const handleStartPractice = (testId: string) => {
     setActiveTestId(testId);
+    setInitialPalette(null);
     startAttemptMutation.mutate(testId);
+  };
+
+  const handleFlagQuestion = () => {
+    const questionId = activeQuestionItem?.question?._id;
+    if (!questionId) return;
+    toggleFlagMutation.mutate({ 
+      questionId, 
+      isFlagged: !!activeQuestionItem.question.isFlagged 
+    });
   };
 
   // Fetch active test details
@@ -107,7 +165,7 @@ export default function Page() {
   const testDetails = testData?.data;
 
   // Fetch active test questions
-  const { data: questionsData, isLoading: isQuestionsLoading } = useQuery({
+  const { data: questionsData } = useQuery({
     queryKey: ["practice-test-questions", activeTestId],
     queryFn: () => userTestApi.getPracticeTestQuestions(activeTestId!),
     enabled: !!activeTestId,
@@ -115,23 +173,34 @@ export default function Page() {
   const questions = questionsData?.data || [];
   const TOTAL = questions.length;
 
-  const [currentQ, setCurrentQ] = useState(1);
-  const [selected, setSelected] = useState<string | null>(null);
-  const [showSolution, setShowSolution] = useState(false);
-  const [statusMap, setStatusMap] = useState<Record<number, QuestionStatus>>({});
-
   useEffect(() => {
     if (questions.length > 0) {
-      const initialMap: Record<number, QuestionStatus> = { 1: "current" };
-      for (let i = 2; i <= questions.length; i++) {
-        initialMap[i] = "untouched";
-      }
-      setStatusMap(initialMap);
-      setCurrentQ(1);
-      setSelected(null);
+      const newMap: Record<number, QuestionStatus> = {};
+
+      questions.forEach((qItem: any, i: number) => {
+        const qId = qItem.question._id || qItem.question;
+        const n = i + 1;
+        
+        const pItem = initialPalette?.find((p: any) => p.questionId === qId);
+        if (pItem && pItem.status && pItem.status !== "untouched") {
+          newMap[n] = pItem.status;
+        } else {
+          newMap[n] = "untouched";
+        }
+      });
+
+      // Find first untouched to set as current
+      const untouchedKeys = Object.keys(newMap).filter(k => newMap[Number(k)] === "untouched");
+      const current = untouchedKeys.length > 0 ? Number(untouchedKeys[0]) : 1;
+      newMap[current] = "current";
+
+      setStatusMap(newMap);
+      setCurrentQ(current);
+      setSelectedOptions([]);
+      setIntegerAnswer("");
       setShowSolution(false);
     }
-  }, [questions.length, activeTestId]);
+  }, [questions.length, activeTestId, initialPalette]);
 
   const activeQuestionItem = questions[currentQ - 1];
   const question = activeQuestionItem?.question as any; // Cast for now
@@ -148,63 +217,100 @@ export default function Page() {
     // Restore selected state if previously answered
     const prevAnswer = userResponses[questions[n - 1].question._id];
     if (prevAnswer) {
-      setSelected(prevAnswer.selected);
+      if (prevAnswer.selectedOptions) setSelectedOptions(prevAnswer.selectedOptions);
+      else setSelectedOptions([]);
+      
+      if (prevAnswer.integerAnswerGiven !== undefined && prevAnswer.integerAnswerGiven !== null) {
+        setIntegerAnswer(String(prevAnswer.integerAnswerGiven));
+      } else {
+        setIntegerAnswer("");
+      }
       setShowSolution(true); // In practice mode, we might want to show solution again
     } else {
-      setSelected(null);
+      setSelectedOptions([]);
+      setIntegerAnswer("");
       setShowSolution(false);
     }
   };
 
-  const handleSubmit = () => {
-    if (!selected || !question) return;
-    
-    let isCorrect = false;
-    const correctOpt = question.options?.find((o: any) => o.isCorrect);
-    if (correctOpt) {
-      isCorrect = selected === correctOpt._id || selected === correctOpt.text;
-    } else if (question.correctOption) {
-      isCorrect = selected === question.correctOption;
-    }
-
-    setStatusMap((prev) => ({
-      ...prev,
-      [currentQ]: isCorrect ? "correct" : "wrong",
-    }));
-    
-    setUserResponses(prev => ({
-      ...prev,
-      [question._id]: {
-        question: question._id,
-        selectedOptions: [selected], // Simple assumption for single choice
-        selected: selected
+  const saveAnswerMutation = useMutation({
+    mutationFn: (payload: { questionId: string, action: "answer" | "skip" | "know_and_skip" | "mark_review" | "clear", selectedOptions?: number[], integerAnswerGiven?: number }) => 
+      userTestAttemptApi.savePracticeAnswer(attemptId!, payload.questionId, payload),
+    onError: (err: any) => {
+      const msg = err.response?.data?.message || err.response?.data?.error?.message || err.message;
+      if (msg?.includes("Test time is over")) {
+        alert("Test time is over! Submitting your attempt...");
+        submitAttemptMutation.mutate({ attemptId: attemptId!, data: { autoSubmit: true } });
+      } else {
+        console.error("Failed to save answer", err);
       }
-    }));
-    
-    setShowSolution(true);
+    }
+  });
+
+  const handleSubmit = () => {
+    if (!question) return;
+    if (question.questionType === "integer" && integerAnswer === "") return;
+    if (question.questionType !== "integer" && selectedOptions.length === 0) return;
+
+    const payload = {
+      questionId: question._id,
+      action: "answer" as const,
+      selectedOptions: question.questionType === "integer" ? [] : selectedOptions,
+      ...(question.questionType === "integer" ? { integerAnswerGiven: Number(integerAnswer) } : {})
+    };
+
+    saveAnswerMutation.mutate(payload, {
+      onSuccess: (res: any) => {
+        const isCorrect = res.data?.isCorrect || res.data?.status === "correct";
+
+        setStatusMap((prev) => ({
+          ...prev,
+          [currentQ]: isCorrect ? "correct" : "wrong",
+        }));
+        
+        setUserResponses(prev => ({
+          ...prev,
+          [question._id]: {
+            question: question._id,
+            selectedOptions: selectedOptions,
+            integerAnswerGiven: question.questionType === "integer" ? Number(integerAnswer) : null
+          }
+        }));
+        
+        setShowSolution(true);
+        
+        setTimeout(() => {
+          if (currentQ < TOTAL) {
+            goTo(currentQ + 1);
+          }
+        }, 1500);
+      }
+    });
   };
 
   const handleSkip = () => {
     setStatusMap((prev) => ({ ...prev, [currentQ]: "skipped" }));
+    if (question) {
+      saveAnswerMutation.mutate({ questionId: question._id, action: "skip" });
+    }
     if (currentQ < TOTAL) goTo(currentQ + 1);
   };
 
   const handleKnowAnswer = () => {
     setStatusMap((prev) => ({ ...prev, [currentQ]: "correct" }));
+    if (question) {
+      saveAnswerMutation.mutate({ questionId: question._id, action: "know_and_skip" });
+    }
     if (currentQ < TOTAL) goTo(currentQ + 1);
   };
 
   const finishTest = () => {
     if (!attemptId) return;
     setIsSubmitting(true);
-    const responsesArray = Object.values(userResponses).map(r => ({
-      question: r.question,
-      selectedOptions: r.selectedOptions
-    }));
     
     submitAttemptMutation.mutate({ 
       attemptId, 
-      data: { responses: responsesArray, autoSubmitted: false } 
+      data: { autoSubmit: false } 
     });
   };
 
@@ -303,20 +409,27 @@ export default function Page() {
       ) : (
         <>
           <div className="flex flex-1 flex-col overflow-hidden relative">
-            <button 
-              onClick={finishTest}
-              disabled={isSubmitting}
-              className="absolute top-4 right-4 z-10 px-4 py-2 bg-indigo-600 text-white rounded-lg border shadow-sm text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
-            >
-              {isSubmitting ? "Submitting..." : "Finish Test"}
-            </button>
-            {/* Pagination bar */}
-            <QuestionPagination
-              total={TOTAL}
-              current={currentQ}
-              statusMap={statusMap}
-              onChange={goTo}
-            />
+            <div className="flex items-start justify-between border-b border-slate-100 bg-white">
+              {/* Pagination bar */}
+              <div className="flex-1 overflow-x-auto">
+                <QuestionPagination
+                  total={TOTAL}
+                  current={currentQ}
+                  statusMap={statusMap}
+                  onChange={goTo}
+                />
+              </div>
+              
+              <div className="p-2 shrink-0">
+                <button 
+                  onClick={finishTest}
+                  disabled={isSubmitting}
+                  className="px-4 py-1.5 bg-indigo-600 text-white rounded-md border shadow-sm text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
+                >
+                  {isSubmitting ? "Submitting..." : "Finish Test"}
+                </button>
+              </div>
+            </div>
 
             {/* Question card */}
             <div className="flex-1 overflow-y-auto p-5">
@@ -326,24 +439,37 @@ export default function Page() {
                   subject={testDetails?.subject?.name || "Subject"}
                   chapter={testDetails?.chapter?.title || "Chapter"}
                   topic={testDetails?.topic?.title || "Topic"}
-                  tag="MCQ"
+                  tag={question?.questionType === "multiple" ? "MSQ" : question?.questionType === "integer" ? "INTEGER" : "MCQ"}
                   exam={testDetails?.examTag || "Practice"}
                   year="Current"
+                  isFlagged={!!question?.isFlagged}
+                  onToggleFlag={handleFlagQuestion}
                 />
 
                 {question && (
                   <QuestionBody
-                    body={question.text?.en || question.body}
+                    body={question.text?.en || question.questionText || question.body || ""}
                     options={(question.options || []).map((o: any, i: number) => ({
-                      key: String.fromCharCode(65 + i),
+                      index: i,
+                      label: String.fromCharCode(65 + i),
                       text: o.text?.en || o.text || o,
-                      _id: o._id || o.id,
-                      isCorrect: o.isCorrect
                     }))}
-                    selected={selected}
-                    onSelect={setSelected}
+                    selectedOptions={selectedOptions}
+                    integerAnswer={integerAnswer}
+                    onSelectOption={(index) => {
+                      if (question.questionType === "multiple") {
+                        setSelectedOptions(prev => 
+                          prev.includes(index) ? prev.filter(i => i !== index) : [...prev, index]
+                        );
+                      } else {
+                        setSelectedOptions([index]);
+                      }
+                    }}
+                    onSelectInteger={setIntegerAnswer}
                     showAnswer={showSolution}
-                    correctAnswer={(question.options || []).find((o: any) => o.isCorrect)?._id || question.correctOption}
+                    correctOptions={question.answer || (question.options || []).map((o: any, i: number) => o.isCorrect ? i : -1).filter((i: number) => i !== -1)}
+                    correctInteger={question.integerAnswer?.toString()}
+                    type={question.questionType}
                   />
                 )}
 
@@ -354,7 +480,7 @@ export default function Page() {
                   onKnowAnswer={handleKnowAnswer}
                   onShowSolution={() => setShowSolution(true)}
                   onSubmit={handleSubmit}
-                  canSubmit={!!selected && !showSolution}
+                  canSubmit={(!showSolution) && (question?.questionType === "integer" ? integerAnswer !== "" : selectedOptions.length > 0)}
                   hasPrev={currentQ > 1}
                   hasNext={currentQ < TOTAL}
                 />

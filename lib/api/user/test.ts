@@ -1,5 +1,5 @@
 import { userClient } from "./client";
-import { ApiResponse, Test, Question } from "../../../types/user-api";
+import { ApiResponse, Test } from "../../../types/user-api";
 
 export const userTestApi = {
   getAllTests: async (

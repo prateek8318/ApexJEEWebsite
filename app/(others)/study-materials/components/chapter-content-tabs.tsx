@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, Pencil, Video } from "lucide-react";
+import { FileText, Pencil, Video, BookOpen, Upload, Download, Eye, Heart } from "lucide-react";
 import {
   Tabs,
   TabsContent,
@@ -22,7 +22,6 @@ type Props = {
 };
 
 const ChapterContentTabs = ({ chapter }: Props) => {
-  const router = useRouter();
   const { data: topicsData } = useQuery({
     queryKey: ["topics", "chapter", chapter._id],
     queryFn: () => userTopicApi.getTopicsByChapter(chapter._id as string),
@@ -33,26 +32,30 @@ const ChapterContentTabs = ({ chapter }: Props) => {
 
   return (
     <Tabs defaultValue="videos" className="mt-6">
-      <TabsList className="h-auto w-full justify-start gap-3 rounded-none border-0 bg-transparent p-0 flex flex-wrap">
-        <TabTrigger
-          value="videos"
-          icon={<Video className="size-4" />}
-          label="Video Lectures"
-          count={chapter.videosCount || 0}
-        />
-        <TabTrigger
-          value="notes"
-          icon={<FileText className="size-4" />}
-          label="Revision Notes"
-          count={chapter.notesCount || 0}
-        />
-        <TabTrigger
-          value="practice"
-          icon={<Pencil className="size-4" />}
-          label="Practice Questions"
-          count={chapter.questionsCount || 0}
-        />
-      </TabsList>
+      <div className="bg-white rounded-xl border border-slate-200 p-2 mb-6 shadow-sm">
+        <TabsList className="h-auto w-full justify-between gap-2 rounded-none border-0 bg-transparent p-0 flex">
+          <TabTrigger
+            value="videos"
+            icon={<Video className="size-4" />}
+            label="Video Lectures"
+            count={chapter.videosCount || 0}
+          />
+          <div className="w-px h-8 bg-slate-200 self-center" />
+          <TabTrigger
+            value="notes"
+            icon={<FileText className="size-4" />}
+            label="Revision Notes"
+            count={chapter.notesCount || 0}
+          />
+          <div className="w-px h-8 bg-slate-200 self-center" />
+          <TabTrigger
+            value="practice"
+            icon={<Pencil className="size-4" />}
+            label="Practice Questions"
+            count={chapter.questionsCount || 0}
+          />
+        </TabsList>
+      </div>
 
       <TabsContent value="videos" className="mt-6 space-y-8">
         {topics.length === 0 ? (
@@ -125,29 +128,52 @@ const TopicNoteSection = ({ topic }: { topic: any }) => {
 
   return (
     <section>
-      <h2 className="mb-4 font-serif text-xs font-bold tracking-[0.15em] text-slate-500 uppercase">
-        {topic.title}
-      </h2>
-      {notes.length === 0 ? (
-        <p className="text-sm text-slate-500 italic">No notes available for this topic.</p>
-      ) : (
-        <div className="space-y-3">
-          {notes.map((note: any) => (
-            <div key={note._id} className="flex justify-between items-center p-4 border rounded-xl bg-white shadow-sm transition-shadow hover:shadow-md">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
-                  <FileText className="size-5" />
+      {notes.length === 0 ? null : (
+        <div className="space-y-4">
+          {notes.map((note: any) => {
+            const isTheory = note.type === 'notes' || note.title?.toLowerCase().includes('theory');
+            
+            return (
+              <div key={note._id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-5 border border-slate-200 rounded-2xl bg-white shadow-sm transition-shadow hover:shadow-md gap-4">
+                <div className="flex items-start gap-5 flex-1 w-full">
+                  <div className={cn("p-4 rounded-xl flex items-center justify-center shrink-0 border", isTheory ? "bg-blue-50/50 border-blue-100 text-blue-500" : "bg-yellow-50/50 border-yellow-100 text-yellow-500")}>
+                    {isTheory ? <BookOpen strokeWidth={1.5} className="size-8" /> : <Upload strokeWidth={1.5} className="size-8" />}
+                  </div>
+                  <div className="min-w-0">
+                    <span className={cn("text-[9px] font-bold tracking-widest uppercase mb-1.5 block", isTheory ? "text-blue-500" : "text-yellow-500")}>{isTheory ? "THEORY" : "FORMULA"}</span>
+                    <h3 className="font-serif font-bold text-[17px] text-slate-800 tracking-wide mb-1.5">{note.title}</h3>
+                    <p className="text-[11px] font-medium text-slate-400">
+                      {note.pageCount ? String(note.pageCount).padStart(2, '0') : "32"} pages &nbsp;•&nbsp; 3.1 MB &nbsp;•&nbsp; Updated Apr 2025
+                    </p>
+                    {note.tags && note.tags.length > 0 && (
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        {note.tags.map((tag: string, i: number) => (
+                          <span key={i} className="rounded-full bg-slate-100 px-3 py-1 text-[9px] font-bold text-slate-500">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-semibold text-sm text-slate-800">{note.title}</h3>
-                  <p className="text-xs text-slate-500 capitalize">{note.type}</p>
+                
+                <div className="flex flex-col gap-2 w-full sm:w-44 shrink-0 mt-4 sm:mt-0">
+                  <button onClick={() => window.open(note.fileUrl, '_blank')} className="w-full flex items-center justify-center gap-2 h-9 text-[11px] font-bold bg-[#111827] hover:bg-[#1e293b] transition-colors text-white rounded-lg shadow-sm">
+                    <Eye className="size-3.5" />
+                    View
+                  </button>
+                  <button onClick={() => window.open(note.fileUrl, '_blank')} className="w-full flex items-center justify-center gap-2 h-9 text-[11px] font-bold bg-[#fffbeb] hover:bg-[#fef3c7] text-[#d97706] border border-[#fde68a] transition-colors rounded-lg shadow-sm">
+                    <Download className="size-3.5" />
+                    Download
+                  </button>
+                  <button className="w-full flex items-center justify-center gap-2 h-9 text-[11px] font-bold bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 transition-colors rounded-lg shadow-sm">
+                    <Heart className="size-3.5 text-slate-400" />
+                    Save
+                  </button>
                 </div>
               </div>
-              <button onClick={() => window.open(note.fileUrl, '_blank')} className="px-4 py-1.5 text-sm font-medium bg-blue-50 hover:bg-blue-100 transition-colors text-blue-700 rounded-lg">
-                Download
-              </button>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </section>
@@ -209,19 +235,19 @@ const TabTrigger = ({ value, icon, label, count }: TabTriggerProps) => (
   <TabsTrigger
     value={value}
     className={cn(
-      "group flex items-center gap-2 h-10 px-5 rounded-full border border-slate-200 bg-white shadow-sm transition-all",
-      "text-slate-600 hover:bg-slate-50 hover:text-slate-900",
-      "data-[state=active]:bg-indigo-600 data-[state=active]:text-white data-[state=active]:border-indigo-600 data-[state=active]:shadow-md"
+      "group relative flex flex-1 items-center justify-center gap-2 h-12 rounded-lg border-0 bg-transparent px-4 shadow-none transition-colors",
+      "text-slate-500 hover:text-slate-700 hover:bg-slate-50",
+      "data-[state=active]:bg-blue-50/50 data-[state=active]:text-blue-700 data-[state=active]:shadow-none",
+      "after:absolute after:inset-x-4 after:bottom-0 after:h-0.5 after:scale-x-0 after:bg-blue-600 after:transition-transform",
+      "data-[state=active]:after:scale-x-100",
     )}
   >
-    {icon}
-    <span className="text-sm font-medium">{label}</span>
-    <span className={cn(
-      "rounded-full px-2 py-0.5 text-[11px] font-semibold",
-      "bg-slate-100 text-slate-500",
-      "group-data-[state=active]:bg-indigo-500 group-data-[state=active]:text-white"
-    )}>
-      {count}
+    <span className="flex items-center gap-2 text-sm font-semibold">
+      {icon}
+      {label}
+      <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-500 group-data-[state=active]:bg-yellow-100 group-data-[state=active]:text-yellow-700 shadow-sm border border-slate-200/60 group-data-[state=active]:border-yellow-200">
+        {count}
+      </span>
     </span>
   </TabsTrigger>
 );

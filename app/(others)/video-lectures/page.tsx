@@ -146,7 +146,7 @@ function VideoLectureContent() {
   }
 
   // API returning { watch: { status: 'watched' | 'in_progress', isCompleted: boolean } } inside each video object
-  const isWatched = lecture?.watch?.isCompleted || false;
+  const isWatched = (lecture as any)?.watch?.isCompleted || false;
   
   const progressPercent = topicStats?.progress?.percent || 0;
   const completedVideos = topicStats?.progress?.completedVideos || 0;
@@ -167,7 +167,7 @@ function VideoLectureContent() {
 
   const handleFlag = () => {
     if (!lecture) return;
-    toggleFlagMutation.mutate({ videoId: lecture._id, isFlagged: !!lecture.isFlagged });
+    toggleFlagMutation.mutate({ videoId: lecture._id, isFlagged: !!(lecture as any).isFlagged });
   };
 
   const handlePrev = () => {
@@ -187,10 +187,10 @@ function VideoLectureContent() {
         currentSubjectId={topicStats?.topic?.subject?._id || subjects[0]?._id}
         currentChapterId={topicStats?.topic?.chapter?._id || chapters[0]?._id}
         currentTopicId={topicId}
-        onSubjectChange={(id) => {
+        onSubjectChange={() => {
           // When subject changes, maybe we just set a state or redirect to its first topic
         }}
-        onChapterChange={(id) => {}}
+        onChapterChange={() => {}}
         onTopicChange={(id) => router.push(`/video-lectures?topicId=${id}`)}
         progress={progressPercent}
         watched={completedVideos}
@@ -233,8 +233,8 @@ function VideoLectureContent() {
             onFavourite={handleFavourite}
             onFlag={handleFlag}
             isWatched={isWatched}
-            isFavourite={lecture?.isFavourite}
-            isFlagged={lecture?.isFlagged}
+            isFavourite={(lecture as any)?.isFavourite}
+            isFlagged={(lecture as any)?.isFlagged}
             lectureNumber={currentIndex + 1}
             lectureTitle={lecture?.title || "Video"}
             duration={lecture?.durationMinutes ? `${lecture.durationMinutes} min` : "Unknown"}

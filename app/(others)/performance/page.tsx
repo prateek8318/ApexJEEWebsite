@@ -1,6 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { userFlagApi } from "@/lib/api/user/flag";
+import { userTestAttemptApi } from "@/lib/api/user/test-attempt";
 import LineChart from "./components/LineChart";
 import BacklogChart from "./components/BacklogChart";
 import DonutChart from "./components/DonutChart";
@@ -11,10 +14,8 @@ import {
   mathsChapters,
   mockTestResults,
   weakAreas,
-  flaggedItems,
   type MockTestResult,
   type WeakArea,
-  type FlaggedItem,
 } from "./data";
 
 // ─── Shared styles ────────────────────────────────────────────────────────────
@@ -172,6 +173,20 @@ function PeriodBar() {
 
 // ─── Section 1: Performance Summary ──────────────────────────────────────────
 function PerformanceSummary() {
+  const { data: perfData } = useQuery({
+    queryKey: ["practicePerformance"],
+    queryFn: () => userTestAttemptApi.getPracticePerformance(),
+  });
+
+  const pData = perfData?.data || {
+    testsAttempted: 0,
+    questionsAttempted: 0,
+    correct: 0,
+    wrong: 0,
+    accuracy: 0,
+    subjectWise: [],
+  };
+
   return (
     <div style={{ marginTop: 28 }}>
       <div
@@ -344,18 +359,18 @@ function PerformanceSummary() {
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-            <DonutChart pct={84} size={80} color="#F97316" label="ACCURACY" />
+            <DonutChart pct={pData.accuracy} size={80} color="#F97316" label="ACCURACY" />
             <div>
               <div style={{ fontSize: 12, color: "#94A3B8", marginBottom: 6 }}>
                 Total Attempted{" "}
                 <span
                   style={{ fontWeight: 700, color: "#0F172A", fontSize: 20 }}
                 >
-                  885
+                  {pData.questionsAttempted}
                 </span>
               </div>
               <div style={{ fontSize: 13, color: "#10B981", fontWeight: 500 }}>
-                ✓ Correct <strong>707</strong>
+                ✓ Correct <strong>{pData.correct}</strong>
               </div>
               <div
                 style={{
@@ -365,7 +380,7 @@ function PerformanceSummary() {
                   marginTop: 2,
                 }}
               >
-                ✗ Wrong <strong>178</strong>
+                ✗ Wrong <strong>{pData.wrong}</strong>
               </div>
             </div>
           </div>
@@ -376,14 +391,18 @@ function PerformanceSummary() {
               marginTop: 12,
               paddingTop: 10,
               borderTop: "1px solid #F1F5F9",
+              flexWrap: "wrap",
             }}
           >
-            <span style={{ fontSize: 12, color: "#475569" }}>
-              Physics: <strong style={{ color: "#3B82F6" }}>83%</strong>
-            </span>
-            <span style={{ fontSize: 12, color: "#475569" }}>
-              Maths: <strong style={{ color: "#3B82F6" }}>77%</strong>
-            </span>
+            {pData.subjectWise.length > 0 ? (
+              pData.subjectWise.map((subj: any) => (
+                <span key={subj.subjectId} style={{ fontSize: 12, color: "#475569" }}>
+                  {subj.name}: <strong style={{ color: "#3B82F6" }}>{subj.accuracy}%</strong>
+                </span>
+              ))
+            ) : (
+              <span style={{ fontSize: 12, color: "#94A3B8" }}>No data yet</span>
+            )}
           </div>
         </div>
 
@@ -1205,25 +1224,43 @@ type TabType = "All" | "Videos" | "Questions" | "Topics";
 
 function RevisionQueue() {
   const [activeTab, setActiveTab] = useState<TabType>("All");
-  const [items, setItems] = useState(flaggedItems);
+  const queryClient = useQueryClient();
 
-  const counts = {
-    Videos: items.filter((i) => i.type === "VIDEO").length,
-    Questions: items.filter((i) => i.type === "QUESTION").length,
-    Topics: items.filter((i) => i.type === "TOPIC").length,
-  };
+  const { data: statsData } = useQuery({
+    queryKey: ["flag-stats"],
+    queryFn: () => userFlagApi.getFlagStats()
+  });
 
-  const filtered =
-    activeTab === "All"
-      ? items
-      : activeTab === "Videos"
-        ? items.filter((i) => i.type === "VIDEO")
-        : activeTab === "Questions"
-          ? items.filter((i) => i.type === "QUESTION")
-          : items.filter((i) => i.type === "TOPIC");
+  const { data: itemsData, isLoading } = useQuery({
+    queryKey: ["flagged-items", activeTab],
+    queryFn: () => {
+      const type = activeTab === "Videos" ? "video" : activeTab === "Questions" ? "question" : activeTab === "Topics" ? "topic" : undefined;
+      return userFlagApi.getFlaggedItems(type);
+    }
+  });
 
-  const remove = (id: string) =>
-    setItems((prev) => prev.filter((i) => i.id !== id));
+  const clearMutation = useMutation({
+    mutationFn: (type?: string) => userFlagApi.clearFlags(type),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["flag-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["flagged-items"] });
+    }
+  });
+
+  const unflagMutation = useMutation({
+    mutationFn: (item: any) => {
+      if (item.contentType === "question") return userFlagApi.unflagQuestion(item.contentId);
+      // fallback for other types if we add specific unflag methods, or use a generic delete
+      return Promise.resolve({ data: null, success: true } as any); 
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["flag-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["flagged-items"] });
+    }
+  });
+
+  const counts = statsData?.data || { videos: 0, questions: 0, topics: 0, total: 0 };
+  const filtered = itemsData?.data || [];
 
   const typeColor: Record<string, { bg: string; color: string }> = {
     VIDEO: { bg: "#EDE9FE", color: "#7C3AED" },
@@ -1257,7 +1294,17 @@ function RevisionQueue() {
               </div>
             </div>
           </div>
-          <button style={S.linkBtn}>Clear Resolved →</button>
+          <button 
+            style={S.linkBtn} 
+            onClick={() => {
+              if (confirm("Are you sure you want to clear all resolved items?")) {
+                const type = activeTab === "Videos" ? "video" : activeTab === "Questions" ? "question" : activeTab === "Topics" ? "topic" : undefined;
+                clearMutation.mutate(type);
+              }
+            }}
+          >
+            Clear Resolved →
+          </button>
         </div>
 
         {/* Summary chips */}
@@ -1272,21 +1319,21 @@ function RevisionQueue() {
           {[
             {
               icon: "🎬",
-              n: counts.Videos,
+              n: counts.videos || 0,
               l: "Flagged Videos",
               c: "#7C3AED",
               bg: "#EDE9FE",
             },
             {
               icon: "❓",
-              n: counts.Questions,
+              n: counts.questions || 0,
               l: "Flagged Questions",
               c: "#059669",
               bg: "#ECFDF5",
             },
             {
               icon: "📚",
-              n: items.filter((i) => i.type === "TOPIC").length,
+              n: counts.topics || 0,
               l: "Flagged Topics",
               c: "#2563EB",
               bg: "#EFF6FF",
@@ -1330,8 +1377,8 @@ function RevisionQueue() {
             (tab) => {
               const count =
                 tab === "All"
-                  ? items.length
-                  : counts[tab as keyof typeof counts];
+                  ? counts.total
+                  : tab === "Videos" ? counts.videos : tab === "Questions" ? counts.questions : counts.topics;
               return (
                 <button
                   key={tab}
@@ -1376,92 +1423,106 @@ function RevisionQueue() {
         </div>
 
         {/* Cards grid */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(4, 1fr)",
-            gap: 14,
-          }}
-        >
-          {filtered.map((item: FlaggedItem) => {
-            const tc = typeColor[item.type];
-            return (
-              <div
-                key={item.id}
-                style={{
-                  border: "1px solid #E2E8F0",
-                  borderRadius: 10,
-                  padding: "14px 14px",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 8,
-                }}
-              >
-                <span
-                  style={{
-                    ...S.tag(tc.color, tc.bg),
-                    fontSize: 10,
-                    fontWeight: 700,
-                    letterSpacing: "0.04em",
-                    alignSelf: "flex-start",
-                  }}
-                >
-                  {item.type}
-                </span>
+        {isLoading ? (
+          <div style={{ padding: 20, textAlign: "center", color: "#94A3B8" }}>Loading...</div>
+        ) : filtered.length === 0 ? (
+          <div style={{ padding: 20, textAlign: "center", color: "#94A3B8" }}>No flagged items found.</div>
+        ) : (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(4, 1fr)",
+              gap: 14,
+            }}
+          >
+            {filtered.map((item: any) => {
+              const typeUpper = item.contentType.toUpperCase();
+              const tc = typeColor[typeUpper] || typeColor["QUESTION"];
+              const title = item.content?.title || item.content?.questionText || "Unknown";
+              const subject = item.content?.subject?.name || "Subject";
+              const chapter = item.content?.chapter?.title || "Chapter";
+              
+              return (
                 <div
+                  key={item._id}
                   style={{
-                    fontSize: 13,
-                    fontWeight: 600,
-                    color: "#0F172A",
-                    lineHeight: 1.4,
+                    border: "1px solid #E2E8F0",
+                    borderRadius: 10,
+                    padding: "14px 14px",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 8,
                   }}
                 >
-                  {item.title}
-                </div>
-                <div style={{ fontSize: 11, color: "#94A3B8" }}>
-                  {item.subject} · {item.chapter}
-                </div>
-                <div style={{ fontSize: 11, color: "#CBD5E1" }}>
-                  Tagged {item.taggedDate}
-                </div>
-                <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
-                  <button
+                  <span
                     style={{
-                      flex: 1,
-                      padding: "6px 0",
-                      background: "#F97316",
-                      border: "none",
-                      borderRadius: 7,
-                      color: "#fff",
-                      fontSize: 12,
+                      ...S.tag(tc.color, tc.bg),
+                      fontSize: 10,
+                      fontWeight: 700,
+                      letterSpacing: "0.04em",
+                      alignSelf: "flex-start",
+                    }}
+                  >
+                    {typeUpper}
+                  </span>
+                  <div
+                    style={{
+                      fontSize: 13,
                       fontWeight: 600,
-                      cursor: "pointer",
+                      color: "#0F172A",
+                      lineHeight: 1.4,
+                      display: "-webkit-box",
+                      WebkitLineClamp: 3,
+                      WebkitBoxOrient: "vertical",
+                      overflow: "hidden",
                     }}
-                  >
-                    Open
-                  </button>
-                  <button
-                    onClick={() => remove(item.id)}
-                    style={{
-                      flex: 1,
-                      padding: "6px 0",
-                      background: "#F1F5F9",
-                      border: "none",
-                      borderRadius: 7,
-                      color: "#64748B",
-                      fontSize: 12,
-                      fontWeight: 500,
-                      cursor: "pointer",
-                    }}
-                  >
-                    Remove
-                  </button>
+                    dangerouslySetInnerHTML={{ __html: title }}
+                  />
+                  <div style={{ fontSize: 11, color: "#94A3B8" }}>
+                    {subject} · {chapter}
+                  </div>
+                  <div style={{ fontSize: 11, color: "#CBD5E1" }}>
+                    Tagged {item.flaggedAtIST || "Recently"}
+                  </div>
+                  <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+                    <button
+                      style={{
+                        flex: 1,
+                        padding: "6px 0",
+                        background: "#F97316",
+                        border: "none",
+                        borderRadius: 7,
+                        color: "#fff",
+                        fontSize: 12,
+                        fontWeight: 600,
+                        cursor: "pointer",
+                      }}
+                    >
+                      Open
+                    </button>
+                    <button
+                      onClick={() => unflagMutation.mutate(item)}
+                      disabled={unflagMutation.isPending}
+                      style={{
+                        flex: 1,
+                        padding: "6px 0",
+                        background: "#F1F5F9",
+                        border: "none",
+                        borderRadius: 7,
+                        color: "#64748B",
+                        fontSize: 12,
+                        fontWeight: 500,
+                        cursor: "pointer",
+                      }}
+                    >
+                      Remove
+                    </button>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
-
+              );
+            })}
+          </div>
+        )}
         {filtered.length > 8 && (
           <div style={{ textAlign: "center", marginTop: 20 }}>
             <button

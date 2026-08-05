@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { userTestApi } from "@/lib/api/user/test";
-import { userTestAttemptApi } from "@/lib/api/user/test-attempt";
+
 import { 
   Clock, 
   Flag, 
@@ -48,7 +48,7 @@ export default function ExamStep({ testId, attemptId, testTitle, onFinishTest }:
         return response;
       }).filter(Boolean);
 
-      return userTestAttemptApi.submitTestAttempt(attemptId, {
+      return userTestApi.submitTestAttempt(attemptId, {
         responses: formattedResponses,
         autoSubmitted: data.autoSubmitted || false,
       });

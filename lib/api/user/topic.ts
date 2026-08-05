@@ -19,5 +19,15 @@ export const userTopicApi = {
   getTopicStats: async (id: string): Promise<ApiResponse<any>> => {
     const response = await userClient.get(`/topicsStats/${id}`);
     return response.data;
+  },
+
+  getTopicFlag: async (id: string): Promise<ApiResponse<any>> => {
+    const response = await userClient.get(`/topics/${id}/flag`);
+    return response.data;
+  },
+
+  updateTopicFlag: async (id: string, notes?: string): Promise<ApiResponse<any>> => {
+    const response = await userClient.patch(`/topics/${id}/flag`, { notes });
+    return response.data;
   }
 };

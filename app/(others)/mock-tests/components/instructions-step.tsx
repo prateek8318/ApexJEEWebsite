@@ -10,7 +10,6 @@ import { Badge } from "@components/ui/badge";
 import { Card } from "@components/ui/card";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { userTestApi } from "@/lib/api/user/test";
-import { userTestAttemptApi } from "@/lib/api/user/test-attempt";
 import { Loader2 } from "lucide-react";
 
 interface InstructionsStepProps {
@@ -29,7 +28,7 @@ export default function InstructionsStep({ testId, testTitle, onBack, onBeginTes
   });
 
   const startMutation = useMutation({
-    mutationFn: () => userTestAttemptApi.startTestAttempt(testId),
+    mutationFn: () => userTestApi.startTestAttempt(testId),
     onSuccess: (res) => {
       if (res.data?._id) {
         onBeginTest(res.data._id);

@@ -78,6 +78,7 @@ export type Video = {
   youtubeUrl: string;
   thumbnailUrl?: string;
   durationMinutes?: number;
+  noteUrl?: string;
   subject: string | Subject;
   chapter: string | Chapter;
   topic: string | Topic;
