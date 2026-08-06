@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { userTopicApi } from "@/lib/api/user/topic";
 import { userVideoApi } from "@/lib/api/user/video";
 import { userSubjectApi } from "@/lib/api/user/subject";
+import { Video } from "@/types/user-api";
 import TopNav from "./components/TopNav";
 import VideoPlayer from "./components/VideoPlayer";
 import LectureControls from "./components/LectureControls";
@@ -61,7 +62,7 @@ function VideoLectureContent() {
     queryFn: () => userVideoApi.getVideosByTopic(topicId!),
     enabled: !!topicId,
   });
-  const videos = videosData?.data || [];
+  const videos: Video[] = videosData?.data || [];
 
   const markWatchedMutation = useMutation({
     mutationFn: (videoId: string) => userVideoApi.markVideoWatched(videoId),
@@ -144,9 +145,10 @@ function VideoLectureContent() {
     );
   }
 
-  // API returning { watch: { status: 'watched' | 'in_progress', isCompleted: boolean } } inside each video object
-  const isWatched = (lecture as any)?.watch?.isCompleted || false;
-  
+  const isWatched = lecture?.watch?.isCompleted || false;
+  const isFavourite = lecture?.isFavourite || false;
+  const isFlagged = lecture?.isFlagged || false;
+
   const progressPercent = topicStats?.progress?.percent || 0;
   const completedVideos = topicStats?.progress?.completedVideos || 0;
   const totalVideos = topicStats?.progress?.totalVideos || videos.length;
@@ -232,8 +234,8 @@ function VideoLectureContent() {
             onFavourite={handleFavourite}
             onFlag={handleFlag}
             isWatched={isWatched}
-            isFavourite={(lecture as any)?.isFavourite}
-            isFlagged={(lecture as any)?.isFlagged}
+            isFavourite={isFavourite}
+            isFlagged={isFlagged}
             lectureNumber={currentIndex + 1}
             lectureTitle={lecture?.title || "Video"}
             duration={lecture?.durationMinutes ? `${lecture.durationMinutes} min` : "Unknown"}

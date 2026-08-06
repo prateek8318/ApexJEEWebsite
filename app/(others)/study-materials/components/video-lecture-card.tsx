@@ -2,7 +2,8 @@ import {
   CheckCircle2,
   FileText,
   Play,
-  PlayCircle
+  Heart,
+  Flag
 } from "lucide-react";
 import type { Video, Topic } from "@/types/user-api";
 import { useRouter } from "next/navigation";
@@ -14,9 +15,10 @@ type Props = {
 
 const VideoLectureCard = ({ video, topicId }: Props) => {
   const router = useRouter();
-  // In a real app, this would come from a user progress API.
-  const isWatched = false; 
-  const watchProgress = 72;
+  const isWatched = !!video.watch?.isCompleted;
+  const watchProgress = video.watch?.percent ?? 0;
+  const isFavourite = !!video.isFavourite;
+  const isFlagged = !!video.isFlagged;
 
   const statusBadge = () => {
     if (isWatched) {
@@ -100,17 +102,17 @@ const VideoLectureCard = ({ video, topicId }: Props) => {
 
           <button
             type="button"
-            className="flex size-10 items-center justify-center rounded-xl border border-red-100 bg-white text-red-500 transition-all hover:bg-red-50 hover:border-red-200"
-            aria-label="Save video"
+            className="flex size-10 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-600 transition-all hover:bg-slate-100"
+            aria-label={isFavourite ? "Bookmarked video" : "Bookmark video"}
           >
-            <PlayCircle className="size-4" />
+            <Heart className={`size-4 ${isFavourite ? "text-red-500" : "text-slate-400"}`} />
           </button>
           <button
             type="button"
-            className="flex size-10 items-center justify-center rounded-xl border border-red-100 bg-white text-red-500 transition-all hover:bg-red-50 hover:border-red-200"
-            aria-label="Bookmark video"
+            className="flex size-10 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-600 transition-all hover:bg-slate-100"
+            aria-label={isFlagged ? "Flagged video" : "Flag video"}
           >
-            <PlayCircle className="size-4" />
+            <Flag className={`size-4 ${isFlagged ? "text-red-500" : "text-slate-400"}`} />
           </button>
         </div>
       </div>

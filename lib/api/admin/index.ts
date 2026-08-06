@@ -4,6 +4,7 @@ export * from './chapters';
 export * from './topics';
 export * from './questions';
 export * from './videos';
+export * from './video-categories';
 export * from './notes';
 export { adminClient } from './client';
 export { plansApi } from './plans';

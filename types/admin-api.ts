@@ -42,6 +42,17 @@ export interface Topic {
   createdAtIST?: string;
 }
 
+export interface VideoCategory {
+  _id: string;
+  topic?: string | Topic;
+  title: string;
+  order: number;
+  isActive: boolean;
+  createdBy?: string | Admin;
+  createdAt: string;
+  createdAtIST?: string;
+}
+
 export interface Question {
   _id: string;
   chapter: string | Chapter;
@@ -86,6 +97,7 @@ export interface Video {
   durationMinutes: number;
   difficulty: "easy" | "medium" | "hard";
   examTag?: string;
+  videoCategory?: string | VideoCategory;
   views: number;
   order: number;
   isActive: boolean;

@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Plus, Edit, Trash2, Youtube } from "lucide-react";
-import { Video, Chapter, Subject } from "@/types/admin-api";
+import { Video, Chapter, Subject, VideoCategory } from "@/types/admin-api";
 import { toast } from "sonner";
 import VideoDialog, { VideoFormValues } from "@/components/admin/video-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -82,15 +82,15 @@ export default function AdminVideosPage() {
   const handleSave = (values: VideoFormValues, file: File | null) => {
     const formData = new FormData();
     Object.entries(values).forEach(([key, value]) => {
-      if (key === 'topic' && value === 'none') {
+      if ((key === 'topic' || key === 'videoCategory') && value === 'none') {
         // Do not append topic if 'none'
-      } else if (key !== 'thumbnailUrl') {
+      } else if (key !== 'thumbnailUrl' && key !== 'noteUrl') {
         formData.append(key, String(value));
       }
     });
 
     if (file) {
-      formData.append("thumbnail", file);
+      formData.append("noteUrl", file);
     }
 
     saveMutation.mutate({ 
@@ -122,6 +122,7 @@ export default function AdminVideosPage() {
               <TableHead className="font-semibold text-slate-600">Video Title</TableHead>
               <TableHead className="font-semibold text-slate-600">Subject</TableHead>
               <TableHead className="font-semibold text-slate-600">Chapter</TableHead>
+              <TableHead className="font-semibold text-slate-600">Category</TableHead>
               <TableHead className="font-semibold text-slate-600">Duration</TableHead>
               <TableHead className="font-semibold text-slate-600">Status</TableHead>
               <TableHead className="text-right font-semibold text-slate-600">Actions</TableHead>
@@ -130,13 +131,13 @@ export default function AdminVideosPage() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center">
+                <TableCell colSpan={7} className="h-24 text-center">
                   Loading...
                 </TableCell>
               </TableRow>
             ) : videos.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center">
+                <TableCell colSpan={7} className="h-24 text-center">
                   No videos found.
                 </TableCell>
               </TableRow>
@@ -153,6 +154,11 @@ export default function AdminVideosPage() {
                         <a href={video.youtubeUrl} target="_blank" rel="noreferrer" className="text-xs text-rose-600 hover:underline">
                           Watch on YouTube
                         </a>
+                        {video.noteUrl && (
+                          <a href={video.noteUrl} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline">
+                            View Notes
+                          </a>
+                        )}
                       </div>
                     </div>
                   </TableCell>
@@ -161,6 +167,13 @@ export default function AdminVideosPage() {
                   </TableCell>
                   <TableCell className="text-slate-600">
                     {typeof video.chapter === "object" ? (video.chapter as Chapter).title : video.chapter}
+                  </TableCell>
+                  <TableCell className="text-slate-600">
+                    {video.videoCategory
+                      ? typeof video.videoCategory === "object"
+                        ? (video.videoCategory as VideoCategory).title
+                        : video.videoCategory
+                      : "-"}
                   </TableCell>
                   <TableCell className="text-slate-500 font-medium">{video.durationMinutes} mins</TableCell>
                   <TableCell>

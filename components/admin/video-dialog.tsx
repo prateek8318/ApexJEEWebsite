@@ -30,12 +30,13 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { Chapter, Subject, Topic, Video } from "@/types/admin-api";
+import { Chapter, Subject, Topic, Video, VideoCategory } from "@/types/admin-api";
 import { useQuery } from "@tanstack/react-query";
 import { subjectsApi } from "@/lib/api/admin/subjects";
 import { chaptersApi } from "@/lib/api/admin/chapters";
 import { topicsApi } from "@/lib/api/admin/topics";
-import { ImageIcon, Youtube } from "lucide-react";
+import { videoCategoriesApi } from "@/lib/api/admin/video-categories";
+import { ExternalLink, ImageIcon, Youtube } from "lucide-react";
 
 const videoSchema = z.object({
   subject: z.string().min(1, "Subject is required."),
@@ -48,6 +49,7 @@ const videoSchema = z.object({
   durationMinutes: z.coerce.number().default(0),
   difficulty: z.enum(["easy", "medium", "hard"]).default("medium"),
   examTag: z.string().optional(),
+  videoCategory: z.string().optional(),
   order: z.coerce.number().default(0),
   isActive: z.boolean().default(true),
 });
@@ -113,10 +115,51 @@ export default function VideoDialog({
     },
   });
 
+  const selectedVideoCategory = form.watch("videoCategory");
+
+  const { data: videoCategoriesData, isLoading: isLoadingVideoCategories } = useQuery({
+    queryKey: ["admin-video-categories"],
+    queryFn: () => videoCategoriesApi.getAllVideoCategories({ limit: 1000 }),
+    enabled: isOpen,
+  });
+
+  const videoCategories: VideoCategory[] = videoCategoriesData?.data || [];
+  const selectedCategory = videoCategories.find((category) => category._id === selectedVideoCategory);
+  const selectedCategoryTopicId = selectedCategory?.topic
+    ? typeof selectedCategory.topic === "object"
+      ? (selectedCategory.topic as Topic)._id
+      : selectedCategory.topic
+    : "";
+
+  const { data: categoryTopicData } = useQuery({
+    queryKey: ["admin-topic-for-video-category", selectedCategoryTopicId],
+    queryFn: () => topicsApi.getTopic(selectedCategoryTopicId),
+    enabled: isOpen && !!selectedCategoryTopicId,
+  });
+
+  useEffect(() => {
+    const categoryTopic = categoryTopicData?.data;
+    if (!categoryTopic || !selectedVideoCategory || selectedVideoCategory === "none") return;
+
+    const subjectId = typeof categoryTopic.subject === "object"
+      ? (categoryTopic.subject as Subject)._id
+      : categoryTopic.subject;
+    const chapterId = typeof categoryTopic.chapter === "object"
+      ? (categoryTopic.chapter as Chapter)._id
+      : categoryTopic.chapter;
+
+    form.setValue("subject", subjectId);
+    form.setValue("chapter", chapterId);
+    form.setValue("topic", categoryTopic._id);
+    setSelectedSubject(subjectId);
+    setSelectedChapter(chapterId);
+  }, [categoryTopicData, form, selectedVideoCategory]);
+
   useEffect(() => {
     if (editingVideo) {
       const subjectId = typeof editingVideo.subject === "object" ? (editingVideo.subject as Subject)._id : editingVideo.subject;
       const chapterId = typeof editingVideo.chapter === "object" ? (editingVideo.chapter as Chapter)._id : editingVideo.chapter;
+      const category = editingVideo.videoCategory;
       
       setSelectedSubject(subjectId);
       setSelectedChapter(chapterId);
@@ -137,6 +180,7 @@ export default function VideoDialog({
         durationMinutes: editingVideo.durationMinutes || 0,
         difficulty: editingVideo.difficulty || "medium",
         examTag: editingVideo.examTag || "",
+        videoCategory: category ? (typeof category === "object" ? (category as VideoCategory)._id : category) : "",
         order: editingVideo.order || 0,
         isActive: editingVideo.isActive !== false,
       });
@@ -154,6 +198,7 @@ export default function VideoDialog({
         durationMinutes: 0,
         difficulty: "medium",
         examTag: "",
+        videoCategory: "",
         order: 0,
         isActive: true,
       });
@@ -183,6 +228,31 @@ export default function VideoDialog({
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleFormSubmit)} className="px-10 py-8 space-y-8">
+            <FormField
+              control={form.control}
+              name="videoCategory"
+              render={({ field }) => (
+                <FormItem className="space-y-2.5">
+                  <FormLabel className="text-slate-700 font-semibold text-sm block mb-2">Video Category (Optional)</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value || ""} disabled={isLoadingVideoCategories}>
+                    <FormControl>
+                      <SelectTrigger className="h-12 px-4 bg-white border-slate-200 shadow-sm focus:ring-blue-500 text-base mt-2">
+                        <SelectValue placeholder="Select category first to auto-fill topic" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="none">-- None --</SelectItem>
+                      {videoCategories.map((category) => (
+                        <SelectItem key={category._id} value={category._id}>
+                          {category.title}{category.topic && typeof category.topic === "object" ? ` - ${(category.topic as Topic).title}` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               <FormField
@@ -198,6 +268,7 @@ export default function VideoDialog({
                         form.setValue("chapter", "");
                         setSelectedChapter("");
                         form.setValue("topic", "");
+                        form.setValue("videoCategory", "");
                       }} 
                       value={field.value} 
                       disabled={isLoadingSubjects}
@@ -229,6 +300,7 @@ export default function VideoDialog({
                         field.onChange(val);
                         setSelectedChapter(val);
                         form.setValue("topic", "");
+                        form.setValue("videoCategory", "");
                       }} 
                       value={field.value} 
                       disabled={isLoadingChapters || !selectedSubject}
@@ -255,7 +327,10 @@ export default function VideoDialog({
                 render={({ field }) => (
                   <FormItem className="space-y-2.5">
                     <FormLabel className="text-slate-700 font-semibold text-sm block mb-2">Topic (Optional)</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || ""} disabled={isLoadingTopics || !selectedChapter}>
+                    <Select onValueChange={(val) => {
+                      field.onChange(val);
+                      form.setValue("videoCategory", "");
+                    }} value={field.value || ""} disabled={isLoadingTopics || !selectedChapter}>
                       <FormControl>
                         <SelectTrigger className="h-12 px-4 bg-white border-slate-200 shadow-sm focus:ring-blue-500 text-base mt-2">
                           <SelectValue placeholder="Select topic" />
@@ -270,9 +345,9 @@ export default function VideoDialog({
                     </Select>
                     <FormMessage />
                   </FormItem>
-                )}
-              />
-            </div>
+              )}
+            />
+          </div>
 
             <FormField
               control={form.control}
@@ -345,6 +420,11 @@ export default function VideoDialog({
                           {...field}
                         />
                       </div>
+                      {editingVideo?.noteUrl && (
+                        <a href={editingVideo.noteUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:underline">
+                          <ExternalLink className="h-3.5 w-3.5" /> View existing note
+                        </a>
+                      )}
                     </FormControl>
                     <FormMessage />
                   </FormItem>

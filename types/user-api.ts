@@ -83,8 +83,21 @@ export type Video = {
   chapter: string | Chapter;
   topic: string | Topic;
   order: number;
+  difficulty?: "easy" | "medium" | "hard";
+  videoCategory?: string;
+  examTag?: string;
   isActive: boolean;
   createdAt: string;
+  watch?: {
+    status: "watched" | "in_progress" | "not_started";
+    percent: number;
+    watchedDurationSec: number;
+    totalDurationSec: number;
+    isCompleted: boolean;
+  };
+  isFavourite?: boolean;
+  isFlagged?: boolean;
+  flagNotes?: string | null;
 };
 
 export type Note = {

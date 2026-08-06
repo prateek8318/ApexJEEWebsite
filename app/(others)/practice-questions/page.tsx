@@ -14,6 +14,7 @@ import { QuestionHeader } from "./components/QuestionHeader";
 import { QuestionBody } from "./components/QuestionBody";
 import { QuestionActionBar } from "./components/QuestionActionBar";
 import { SessionOverview } from "./components/SessionOverview";
+import SubmitModal from "../mock-tests/components/submit-modal";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -195,6 +196,18 @@ export default function Page() {
   const questions = questionsData?.data || [];
   const TOTAL = questions.length;
 
+  // Derived stats for submit confirmation
+  const correctCount = Object.values(statusMap).filter((s) => s === "correct").length;
+  const wrongCount = Object.values(statusMap).filter((s) => s === "wrong").length;
+  const skippedCount = Object.values(statusMap).filter((s) => s === "skipped").length;
+  const notAttemptedCount = Math.max(TOTAL - correctCount - wrongCount - skippedCount, 0);
+  const statsForSubmit = {
+    answered: correctCount + wrongCount,
+    skipped: skippedCount,
+    marked: 0,
+    notAttempted: notAttemptedCount,
+  };
+
   useEffect(() => {
     if (questions.length > 0) {
       const newMap: Record<number, QuestionStatus> = {};
@@ -307,20 +320,47 @@ export default function Page() {
           ...prev,
           [currentQ]: isCorrect ? "correct" : "wrong",
         }));
-        
+
+        // Normalize correct options into indices so UI highlights correctly
+        const rawCorrect = res.data?.correctOptions;
+        let normalizedCorrect: number[] = [];
+
+        if (Array.isArray(rawCorrect) && rawCorrect.length > 0) {
+          if (rawCorrect.every((r: any) => typeof r === "number")) {
+            normalizedCorrect = rawCorrect;
+          } else if (rawCorrect.every((r: any) => typeof r === "string" && r.length === 1 && /[A-Z]/.test(r))) {
+            normalizedCorrect = rawCorrect.map((r: string) => r.charCodeAt(0) - 65);
+          } else {
+            // Possibly option IDs -> map to indices
+            normalizedCorrect = (question.options || [])
+              .map((o: any, i: number) => (rawCorrect.includes(o._id) ? i : -1))
+              .filter((i: number) => i !== -1);
+          }
+        } else if (typeof rawCorrect === "string" && rawCorrect.length === 1 && /[A-Z]/.test(rawCorrect)) {
+          normalizedCorrect = [rawCorrect.charCodeAt(0) - 65];
+        } else if (question.answer) {
+          if (typeof question.answer === "string") {
+            normalizedCorrect = [question.answer.charCodeAt(0) - 65];
+          } else if (Array.isArray(question.answer)) {
+            normalizedCorrect = question.answer;
+          }
+        } else {
+          normalizedCorrect = (question.options || []).map((o: any, i: number) => (o.isCorrect ? i : -1)).filter((i: number) => i !== -1);
+        }
+
         setUserResponses(prev => ({
           ...prev,
           [question._id]: {
             question: question._id,
             selectedOptions: selectedOptions,
             integerAnswerGiven: question.questionType === "integer" ? Number(integerAnswer) : null,
-            correctOptions: res.data?.correctOptions,
+            correctOptions: normalizedCorrect,
             correctInteger: res.data?.correctInteger
           }
         }));
-        
+
         setShowSolution(true);
-        
+
         setTimeout(() => {
           if (currentQ < TOTAL) {
             goTo(currentQ + 1);
@@ -331,6 +371,13 @@ export default function Page() {
   };
 
   const handleSkip = () => {
+    const currentStatus = statusMap[currentQ];
+    // Don't overwrite an already answered question
+    if (currentStatus === "correct" || currentStatus === "wrong") {
+      if (currentQ < TOTAL) goTo(currentQ + 1);
+      return;
+    }
+
     setStatusMap((prev) => ({ ...prev, [currentQ]: "skipped" }));
     if (question) {
       saveAnswerMutation.mutate({ questionId: question._id, action: "skip" });
@@ -347,13 +394,17 @@ export default function Page() {
   };
 
   const finishTest = () => {
+    // Show confirmation modal with current stats before final submit
+    setIsSubmitModalOpen(true);
+  };
+
+  const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
+
+  const handleConfirmSubmit = () => {
     if (!attemptId) return;
     setIsSubmitting(true);
-    
-    submitAttemptMutation.mutate({ 
-      attemptId, 
-      data: { autoSubmit: false } 
-    });
+    setIsSubmitModalOpen(false);
+    submitAttemptMutation.mutate({ attemptId, data: { autoSubmit: false } });
   };
 
   const renderTestSelection = () => {
@@ -509,7 +560,24 @@ export default function Page() {
                     }}
                     onSelectInteger={setIntegerAnswer}
                     showAnswer={showSolution}
-                    correctOptions={userResponses[question._id]?.correctOptions || question.answer || (question.options || []).map((o: any, i: number) => o.isCorrect ? i : -1).filter((i: number) => i !== -1)}
+                    correctOptions={(() => {
+                      const resp = userResponses[question._id]?.correctOptions;
+                      if (Array.isArray(resp) && resp.length > 0) return resp;
+
+                      // If question.answer is a string like "A", convert to index
+                      if (typeof question.answer === "string") {
+                        try {
+                          return [question.answer.charCodeAt(0) - 65];
+                        } catch (e) {
+                          return [];
+                        }
+                      }
+
+                      if (Array.isArray(question.answer) && question.answer.length > 0) return question.answer;
+
+                      // Fallback to options with isCorrect flag
+                      return (question.options || []).map((o: any, i: number) => (o.isCorrect ? i : -1)).filter((i: number) => i !== -1);
+                    })()}
                     correctInteger={userResponses[question._id]?.correctInteger || question.integerAnswer?.toString()}
                     type={question.questionType}
                   />
@@ -537,8 +605,17 @@ export default function Page() {
             statusMap={statusMap}
             onSelectQ={goTo}
           />
+          {isSubmitModalOpen && (
+            <SubmitModal
+              stats={statsForSubmit}
+              onClose={() => setIsSubmitModalOpen(false)}
+              onSubmit={handleConfirmSubmit}
+            />
+          )}
         </>
       )}
     </div>
   );
 }
+
+// Note: Submit modal stats are computed from statusMap when needed

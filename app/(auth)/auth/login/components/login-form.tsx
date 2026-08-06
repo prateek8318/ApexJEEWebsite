@@ -24,7 +24,7 @@ import { AxiosError } from "axios";
 import { useMutation } from "@tanstack/react-query";
 import { authApi } from "@lib/api/admin";
 import { userAuthApi } from "@lib/api/user/auth";
-import useSession from "@stores/session";
+import useSession, { useAdminSession } from "@stores/session";
 
 type LoginFormProps = { userType?: "student" | "tutor" | "admin" };
 
@@ -73,7 +73,7 @@ const LoginForm = ({
       
       if (userType === "admin") {
         const userObj = response?.data?.user || response?.user || { name: "Admin" };
-        setSession({
+        useAdminSession.getState().setSession({
           ...userObj,
           token: response?.token || "",
         });
